@@ -1,0 +1,2 @@
+# SquadStatsWOTC-XCOM2Mod
+ 

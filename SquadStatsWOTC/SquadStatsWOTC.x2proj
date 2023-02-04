@@ -21,6 +21,9 @@
     <Content Include="Config\XComUI.ini">
       <SubType>Content</SubType>
     </Content>
+    <Content Include="Localization\SquadStatsWOTC.int">
+      <SubType>Content</SubType>
+    </Content>
     <Content Include="ReadMe.txt" />
     <Content Include="ModPreview.jpg" />
     <Content Include="Config\XComEditor.ini" />
@@ -28,6 +31,9 @@
     <Content Include="Config\XComGame.ini" />
     <Content Include="Localization\XComGame.int" />
     <Content Include="Src\LW_Tuple\Classes\LWTuple.uc">
+      <SubType>Content</SubType>
+    </Content>
+    <Content Include="Src\SquadStatsWOTC\Classes\SquadScreen.uc">
       <SubType>Content</SubType>
     </Content>
     <Content Include="Src\SquadStatsWOTC\Classes\UISL_CommanderQuarter.uc">

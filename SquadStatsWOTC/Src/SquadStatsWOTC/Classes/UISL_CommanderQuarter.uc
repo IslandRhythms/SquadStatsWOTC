@@ -122,14 +122,13 @@ static protected function OnButtonClickedSimple  (optional StateObjectReference 
 
 static function OnButtonClicked()
 {
-	local MissionHistoryScreen MHS;
-	//Movie.Pres.UIXComDatabase();
-	if( `HQPRES.ScreenStack.IsNotInStack(class'MissionHistoryScreen') )
+	local SquadScreen SS;
+	if( `HQPRES.ScreenStack.IsNotInStack(class'SquadScreen') )
 	{
-		MHS = `HQPRES.Spawn(class'MissionHistoryScreen',`HQPRES);
-        // MHS.InitProcess();
+		SS = `HQPRES.Spawn(class'SquadScreen',`HQPRES);
 
-        `HQPRES.ScreenStack.Push(MHS);
+        `HQPRES.ScreenStack.Push(SS);
+		SS.InitScreen();
 	}
 
 }

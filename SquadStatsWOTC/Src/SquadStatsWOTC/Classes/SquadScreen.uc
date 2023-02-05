@@ -59,3 +59,31 @@ simulated function UpdateNavHelp()
 
 }
 
+
+simulated function CreateSortHeaders()
+{
+	//1st two are 'not needed' but is for the flash stuff ? Dunno, the whole dropdown menu goes haywire without them
+	m_kSoldierSortHeader = Spawn(class'UIPanel', self);
+	m_kSoldierSortHeader.bIsNavigable = false;
+	m_kSoldierSortHeader.InitPanel('soldierSort', 'SoldierSortHeader');
+	m_kSoldierSortHeader.Hide();
+
+	m_kDeceasedSortHeader = Spawn(class'UIPanel', self);
+	m_kDeceasedSortHeader.bIsNavigable = false;
+	m_kDeceasedSortHeader.InitPanel('deceasedSort', 'DeceasedSortHeader');
+	m_kDeceasedSortHeader.Hide();
+
+	//the one we actually want to adjust
+	m_kPersonnelSortHeader = Spawn(class'UIPanel', self);
+	m_kPersonnelSortHeader.bIsNavigable = false;
+	m_kPersonnelSortHeader.InitPanel('personnelSort', 'PersonnelSortHeader');
+	m_kPersonnelSortHeader.Hide();
+
+	// Create Bestiary header 
+	if(m_arrNeededTabs.Find(eUIPersonnel_Scientists) != INDEX_NONE)
+	{
+		Spawn(class'UIFlipSortButton', m_kPersonnelSortHeader).InitFlipSortButton("nameButton", ePersonnelSoldierSortType_Name, m_strButtonLabels_Name);
+		Spawn(class'UIFlipSortButton', m_kPersonnelSortHeader).InitFlipSortButton("statusButton", ePersonnelSoldierSortType_Status, m_strButtonLabels_Status);
+	}
+}
+

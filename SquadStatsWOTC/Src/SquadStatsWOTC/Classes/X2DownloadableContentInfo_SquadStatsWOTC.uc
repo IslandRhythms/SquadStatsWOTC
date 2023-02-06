@@ -16,10 +16,41 @@ class X2DownloadableContentInfo_SquadStatsWOTC extends X2DownloadableContentInfo
 /// create without the content installed. Subsequent saves will record that the content was installed.
 /// </summary>
 static event OnLoadedSavedGame()
-{}
+{
+	CheckUpdateOrCreateNewGameState();
+}
 
 /// <summary>
 /// Called when the player starts a new campaign while this DLC / Mod is installed
 /// </summary>
 static event InstallNewCampaign(XComGameState StartState)
 {}
+
+static event OnPostMission() {
+	CheckUpdateOrCreateNewGameState();
+}
+
+static final function CheckUpdateOrCreateNewGameState()
+{
+	local XComGameState_SquadStats Log;
+    local XComGameState NewGameState;
+    local XComGameStateHistory History;
+
+    History = `XCOMHISTORY;
+    Log = XComGameState_SquadStats(History.GetSingleGameStateObjectForClass(class 'XComGameState_SquadStats', true));
+
+    NewGameState = class'XComGameStateContext_ChangeContainer'.static.CreateChangeState("Check, create or Update MissionLogs");
+
+    if (Log == none)
+    {
+        Log = XComGameState_SquadStats(NewGameState.CreateNewStateObject(class'XComGameState_SquadStats'));
+    }
+    else
+    {
+        Log = XComGameState_SquadStats(NewGameState.ModifyStateObject(Log.Class, Log.ObjectID));
+    }
+
+    Log.UpdateSquadData();
+
+    `GAMERULES.SubmitGameState(NewGameState);
+}

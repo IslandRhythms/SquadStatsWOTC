@@ -128,7 +128,7 @@ static function OnButtonClicked()
 		SS = `HQPRES.Spawn(class'SquadScreen',`HQPRES);
 
         `HQPRES.ScreenStack.Push(SS);
-		SS.InitScreen();
+		SS.InitSquadScreen();
 	}
 
 }

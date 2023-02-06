@@ -36,6 +36,15 @@
     <Content Include="Src\SquadStatsWOTC\Classes\SquadScreen.uc">
       <SubType>Content</SubType>
     </Content>
+    <Content Include="Src\SquadStatsWOTC\Classes\SquadStatsNavHelpHook.uc">
+      <SubType>Content</SubType>
+    </Content>
+    <Content Include="Src\SquadStatsWOTC\Classes\SquadStats_Details.uc">
+      <SubType>Content</SubType>
+    </Content>
+    <Content Include="Src\SquadStatsWOTC\Classes\SquadStats_ListItem.uc">
+      <SubType>Content</SubType>
+    </Content>
     <Content Include="Src\SquadStatsWOTC\Classes\UISL_CommanderQuarter.uc">
       <SubType>Content</SubType>
     </Content>

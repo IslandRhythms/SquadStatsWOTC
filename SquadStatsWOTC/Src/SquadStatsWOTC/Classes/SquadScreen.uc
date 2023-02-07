@@ -4,7 +4,7 @@ class SquadScreen extends UIPersonnel;
 
 var UIPersonnel SquadList;
 var UINavigationHelp NavHelp;
-var SquadStats_ListItem LastHighlighted;
+var SquadScreen_ListItem LastHighlighted;
 
 
 simulated function InitSquadScreen()
@@ -68,11 +68,39 @@ simulated function OnCancel()
 	Movie.Pres.PlayUISound(eSUISound_MenuClose);
 }
 
+simulated function PopulateListInstantly() {
+	local XComGameState_SquadStats Stats;
+	local int i;
+	Stats = XComGameState_SquadStats(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_SquadStats', true));
+	for (i = 0; i < Stats.SquadData.Length; i++) {
+		Spawn(class'SquadScreen_ListItem', m_kList.itemContainer).InitListItem(Stats.SquadData[i]);
+	}
+	while(m_kList.itemCount < Stats.SquadData.Length) {
+		
+	}
+	MC.FunctionString("SetEmptyLabel", Stats.SquadData.Length == 0 ? "No Squads Created": "");
+}
+
+simulated function PopulateListSequentially(UIPanel Control) {
+	PopulateListInstantly();
+}
+
+simulated function UpdateData() {
+	local XComGameState_SquadStats SquadStats;
+	local XComGameStateHistory History;
+	local XComGameState_Unit Unit;
+	local int i;
+    	
+	History = `XCOMHISTORY;
+
+	// Destroy old data
+	m_arrSoldiers.Length = 0;	m_arrScientists.Length = 0;	m_arrEngineers.Length = 0;	m_arrDeceased.Length = 0;
+
+}
 
 defaultproperties
 {
 	MCName          = "theScreen";
 	Package = "/ package/gfxSoldierList/SoldierList";
 	bConsumeMouseEvents = true;
-	m_eSortType = eGM_SortMissionName;
 }

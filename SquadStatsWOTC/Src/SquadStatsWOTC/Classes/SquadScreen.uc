@@ -77,9 +77,6 @@ simulated function PopulateListInstantly() {
 	for (i = 0; i < Stats.SquadData.Length; i++) {
 		Spawn(class'SquadScreen_ListItem', m_kList.itemContainer).InitListItem(Stats.SquadData[i]);
 	}
-	while(m_kList.itemCount < Stats.SquadData.Length) {
-		
-	}
 	MC.FunctionString("SetEmptyLabel", Stats.SquadData.Length == 0 ? "No Squads Created": "");
 }
 

@@ -14,6 +14,8 @@ simulated function InitSquadScreen()
 	SquadList.m_eListType = eUIPersonnel_Scientists;
 	SquadList.onSelectedDelegate = OnPersonnelSelected;
 	SquadList.bIsNavigable = true;
+
+	MC.FunctionString("SetScreenHeader", "Squads");
 }
 
 simulated function OnPersonnelSelected(StateObjectReference selectedUnitRef)

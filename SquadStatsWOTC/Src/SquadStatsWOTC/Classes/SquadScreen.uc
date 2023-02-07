@@ -103,4 +103,5 @@ defaultproperties
 	MCName          = "theScreen";
 	Package = "/ package/gfxSoldierList/SoldierList";
 	bConsumeMouseEvents = true;
+	m_eListType=eUIPersonnel_Scientists;
 }

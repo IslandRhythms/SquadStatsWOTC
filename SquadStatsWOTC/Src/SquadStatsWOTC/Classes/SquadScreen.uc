@@ -23,7 +23,7 @@ simulated function OnPersonnelSelected(StateObjectReference selectedUnitRef)
 	local TDialogueBoxData DialogData;
 	// local SquadDetails Data;
 	local String StrDetails;
-
+	`log("HELLO");
 	// Data = icon.Datum;
 	DialogData.eType = eDialog_Normal;
 	DialogData.strTitle = "This is a title";

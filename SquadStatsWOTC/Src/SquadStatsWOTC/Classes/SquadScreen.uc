@@ -31,11 +31,11 @@ simulated function OpenSquadDetails(SquadScreen_ListItem Data) {
 	local Texture2D StaffPicture;
 	Detail = Data.Data;
 	DialogData.eType = eDialog_Normal;
-	DialogData.strTitle = Data.SquadName;
+	DialogData.strTitle = Detail.SquadName;
 	DialogData.strAccept = class'UIDialogueBox'.default.m_strDefaultAcceptLabel;
 	StrDetails = "";
 	DialogData.strText = StrDetails;
-	DialogData.strImagePath = class'UIUtilities_Image'.static.ValidateImagePath(Data.SquadIcon);
+	DialogData.strImagePath = class'UIUtilities_Image'.static.ValidateImagePath(Detail.SquadIcon);
 	Movie.Pres.UIRaiseDialog( DialogData );
 }
 

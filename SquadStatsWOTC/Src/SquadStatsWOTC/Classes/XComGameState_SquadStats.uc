@@ -1,23 +1,30 @@
 // This is an Unreal Script
 class XComGameState_SquadStats extends XComGameState_BaseObject;
 
+
+struct SoldierDetails {
+	var string FullName;
+	var int SoldierID;
+};
+
 struct SquadDetails {
-	var array<String> CurrentMembers;
-	var array<String> PastMembers;
-	var array<String> DeceasedMembers;
+	var array<SoldierDetails> CurrentMembers;
+	var array<SoldierDetails> PastMembers;
+	var array<String> DeceasedMembers; // can keep as an array of strings cause once they're dead, there is no coming back.
 	var array<String> PastSquadNames;
 	var array<String> MissionNames;
 	var float MissionClearanceRate;
 	var float WinRateAgainstWarlock;
 	var float WinRateAgainstHunter;
 	var float WinRateAgainstAssassin;
+	var float NumMissions;
 	var string SquadInceptionDate;
 	var string SquadIcon;
 	var string SquadName;
-	var string CurrentSquadCommander; // First soldier Added to the Squad. Can change over time
+	var string CurrentSquadLeader; // First soldier Added to the Squad. Can change over time
 	var TDateTime RawInception;
-	var bool bIsActive; // If the user deletes a squad, don't display it. If they remake the squad, we can reaccess the old data.
-	var StateObjectReference SquadID;
+	var bool bIsActive; // If the user deletes a squad, set status to decomissioned. If they remake the squad, we can reaccess the old data. Update ObjectID
+	var int SquadID;
 };
 
 struct ChosenInformation {
@@ -38,40 +45,115 @@ function UpdateSquadData() {
 	local XComGameState_LWPersistentSquad Squad;
 	local SquadDetails EntryData;
 	local XComGameState_BattleData BattleData;
-	local int Index;
+	local XComGameState_Unit Unit;
+	local int Index, Exists, Increase;
 
 	SquadMgr = XComGameState_LWSquadManager(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_LWSquadManager', true));
 	Squad = XComGameState_LWPersistentSquad(`XCOMHISTORY.GetGameStateForObjectID(SquadMgr.LastMissionSquad.ObjectID));
 	BattleData = XComGameState_BattleData(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_BattleData'));
 	// Check if the Squad already exists in our Data
 	Index = SquadData.Find('SquadID', SquadMgr.LastMissionSquad.ObjectID);
-	if (Index == INDEX_NONE && BattleData.m_strOpName == "Operation Gatecrasher") {
+	if (BattleData.m_strOpName == "Operation Gatecrasher") {
 	// Need to get a default image to use for the squad icon since its only used once.
 	/*
-		EntryData.SquadIcon = ;
+		EntryData.SquadIcon = ; // Cannot make this client facing
 		EntryData.SquadName = "XCOM"; // make this client facing so they can create the squad later on and keep these details
 		EntryData.RawInception = ;
 		EntryData.SquadInceptionDate;
 		EntryData.MissionNames.AddItem(BattleData.m_strOpName);
 	*/
 	} else if (Index == INDEX_NONE) { // Not gatecrasher but the first time this squad went out on a mission
-		EntryData.SquadID = SquadMgr.LastMissionSquad.ObjectID;
-	} else { // any other time
+		Exists = SquadData.Find('SquadName', Squad.sSquadName);
+		if (Exists != INDEX_NONE) { // this squad was deleted but the player is reusing the name.
+			// update the object id
+			SquadData[Exists].SquadID = SquadMgr.LastMissionSquad.ObjectID;
+		} else {
+			EntryData.SquadID = SquadMgr.LastMissionSquad.ObjectID;
+			EntryData.RawInception = BattleData.LocalTime;
+			EntryData.SquadInceptionDate = class'X2StrategyGameRulesetDataStructures'.static.GetDateString(BattleData.LocalTime, true); // Set as the first mission they complete
+			EntryData.SquadIcon = Squad.SquadImagePath != "" ? Squad.SquadImagePath : Squad.DefaultSquadImagePath;
+			EntryData.SquadName = Squad.sSquadName != "" ? Squad.sSquadName : "XCOM";
+			EntryData.MissionNames.AddItem(BattleData.m_strOpName);
+			EntryData.NumMissions = 1.0;
+			Unit = Squad.GetSoldier(0);
+			EntryData.CurrentSquadLeader = Unit.GetFullName();
+			EntryData.bIsActive = true;
+			SquadData.AddItem(EntryData); // should only do this on cases where the entry wasn't in the db
+		}
+	} else { // The squad returning from the mission exists in the db
+		SquadData[Index].SquadName = Squad.sSquadName; // could change the name, need to stay up to date
+		SquadData[Index].SquadIcon = Squad.SquadImagePath != "" ? Squad.SquadImagePath : Squad.DefaultSquadImagePath; // could change the icon, stay up to date
+		SquadData[Index].MissionNames.AddItem(BattleData.m_strOpName);
+		SquadData[Index].NumMissions += 1.0;
+		Unit = Squad.GetSoldier(0);
+		SquadData[Index].CurrentSquadLeader = Unit.GetFullName();
+		SquadData[Index].DeceasedMembers = UpdateDeceasedSquadMembers(SquadData[Index].DeceasedMembers);
+		// SquadData[Index].PastMembers = UpdateRosterHistory();
 
 	}
 	// TODO: iterate through all the squads to see if any have been deleted.
-	// foreach `XCOMHQ.Squad(UnitRef) // an array of unit refs. Might be easier to use the squad functions
-	// EntryData.CurrentSquadCommander = Get the Squad that was deployed and use the first entry [0] in the array
-
-	EntryData.
-	// EntryData.SquadInceptionDate = // Set as the first mission they complete
-
-	EntryData.SquadIcon = Squad.SquadImagePath ? Squad.SquadImagePath : Squad.DefaultSquadImagePath;
-
-	EntryData.SquadName = Squad.sSquadName ? Squad.sSquadName : "XCOM";
-	SquadData.AddItem(EntryData);
 
 }
+/*
+ * Go through all the squads in the squad manager
+ * and check if a squad in our array is missing.
+ * If so, update the status of our squad to false.
+ */
+// maybe add a new property that stores the time the squad was reactivated? array?
+function UpdateSquadStatus() {
+
+}
+
+function UpdateClearanceRate() {
+
+}
+
+function UpdateClearanceRateAgainstChosen(string Chosen) {
+
+}
+
+
+// for updating var array<String> DeceasedMembers;
+function array<String> UpdateDeceasedSquadMembers(array<String> Dead) {
+	local XcomGameState_Unit Unit;
+	local StateObjectReference UnitRef;
+	local int Index;
+	local string FullName;
+	local array<String> UpdatedList;
+	for (Index = 0; Index < Dead.Length; Index++) {
+		UpdatedList.AddItem(Dead[Index]);
+	}
+	foreach `XCOMHQ.Squad(UnitRef)
+	{
+		Unit = XComGameState_Unit(`XCOMHISTORY.GetGameStateForObjectID(UnitRef.ObjectID));
+		if (!Unit.IsAlive()) {
+			FullName = Unit.GetFullName();
+			UpdatedList.AddItem(FullName);
+		}
+	}
+	return UpdatedList;
+}
+
+// for updating var array<String> PastMembers;
+/*
+ * This function checks the current members assigned to the squad, and see if it matches what's in the data
+ * If not, it updates the array accordingly
+*/
+function UpdateRosterHistory(array<SoldierDetails> CurrentMembers) {
+	local XComGameState_Unit Unit;
+	local StateObjectReference UnitRef;
+	local string FullName;
+	local int Index;
+
+	foreach `XCOMHQ.Squad(UnitRef)
+	{
+		Unit = XComGameState_Unit(`XCOMHISTORY.GetGameStateForObjectID(UnitRef.ObjectID));
+		// FullName = Unit.GetFullName();
+		// Index = CurrentMembers.Find(,FullName);
+	}
+}
+
+
 
 function bool IsModActive(name ModName)
 {

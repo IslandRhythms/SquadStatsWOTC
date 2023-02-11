@@ -88,7 +88,7 @@ function UpdateSquadData() {
 		Unit = Squad.GetSoldier(0);
 		SquadData[Index].CurrentSquadLeader = Unit.GetFullName();
 		SquadData[Index].DeceasedMembers = UpdateDeceasedSquadMembers(SquadData[Index].DeceasedMembers);
-		// SquadData[Index].PastMembers = UpdateRosterHistory();
+		SquadData[Index].PastMembers = UpdateRosterHistory(Squad, SquadData[Index].CurrentMembers);
 
 	}
 	// TODO: iterate through all the squads to see if any have been deleted.
@@ -134,23 +134,37 @@ function array<String> UpdateDeceasedSquadMembers(array<String> Dead) {
 	return UpdatedList;
 }
 
-// for updating var array<String> PastMembers;
+// for updating var array<SoldierDetails> PastMembers;
 /*
  * This function checks the current members assigned to the squad, and see if it matches what's in the data
- * If not, it updates the array accordingly
+ * If not, it updates the array accordingly and returns an array of past members.
 */
-function UpdateRosterHistory(array<SoldierDetails> CurrentMembers) {
+function UpdateRosterHistory(XComGameState_LWPersistentSquad Squad, array<SoldierDetails> CurrentMembers) {
 	local XComGameState_Unit Unit;
+	local array<XComGameState_Unit> Units;
 	local StateObjectReference UnitRef;
 	local string FullName;
-	local int Index;
+	local int Index, Exists;
 
+	Units = Squad.GetSoldiers(); // This is different from the Units that were deployed.
+	/*  Squad.GetSoldiers() gets the soldiers assigned to the squad. Past soldiers would no longer be in this list. But we should have a record in CurrentMembers
+		If CurrentMembers doesn't contain any of these troops, then the missing ones are past members.
+	*/
 	foreach `XCOMHQ.Squad(UnitRef)
 	{
 		Unit = XComGameState_Unit(`XCOMHISTORY.GetGameStateForObjectID(UnitRef.ObjectID));
+		Exists = CurrentMembers.Find('SoldierID', UnitRef.ObjectID);
+		if (Exists != INDEX_NONE) {
+
+		}
 		// FullName = Unit.GetFullName();
 		// Index = CurrentMembers.Find(,FullName);
 	}
+}
+
+// resets the array and populates with Squad.GetSoldiers();
+function UpdateCurrentMembers() {
+
 }
 
 

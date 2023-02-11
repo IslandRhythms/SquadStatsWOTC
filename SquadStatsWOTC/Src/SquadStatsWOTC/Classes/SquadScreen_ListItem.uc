@@ -16,7 +16,7 @@ var string m_StrStatus;
 
 var bool bIsFocussed;
 
-simulated function InitListItem(SquadDetails Entry)
+simulated function SquadScreen_ListItem InitListItem(SquadDetails Entry)
 {
 
 	InitPanel(); // must do this before adding children or setting data
@@ -35,6 +35,8 @@ simulated function InitListItem(SquadDetails Entry)
 	UpdateData(); // this is really 'set initial data' as the listitem gets destroyed and recreateds
 
 	SetHudHeadIcon();
+
+	return self;
 }
 
 simulated function CreateHudHeadIcon()

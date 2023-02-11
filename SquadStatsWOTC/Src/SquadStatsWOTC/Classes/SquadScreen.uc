@@ -1,6 +1,6 @@
 // This is an Unreal Script
 
-class SquadScreen extends UIPersonnel;
+class SquadScreen extends UIPersonnel dependson(XComGameState_SquadStats);
 
 var UIPersonnel SquadList;
 var UINavigationHelp NavHelp;
@@ -12,26 +12,30 @@ simulated function InitSquadScreen()
 	SquadList = Spawn(class'UIPersonnel', self);
 	// SquadList.OverrideInterpTime = 0.0;
 	SquadList.m_eListType = eUIPersonnel_Scientists;
-	SquadList.onSelectedDelegate = OnPersonnelSelected;
 	SquadList.bIsNavigable = true;
-
+	// SquadList.OnItemClicked = OnSquadSelected;
 	MC.FunctionString("SetScreenHeader", "Squads");
 }
 
-simulated function OnPersonnelSelected(StateObjectReference selectedUnitRef)
-{
+simulated function OnListItemClicked(UIList ContainerList, int ItemIndex) {
+	if (!SquadScreen_ListItem(ContainerList.GetItem(ItemIndex)).IsDisabled) {
+		OpenSquadDetails(SquadScreen_ListItem(ContainerList.GetItem(ItemIndex)));
+	}
+}
+
+// I have the list item, but how do I get the data?
+simulated function OpenSquadDetails(SquadScreen_ListItem Data) {
 	local TDialogueBoxData DialogData;
-	// local SquadDetails Data;
 	local String StrDetails;
-	`log("HELLO");
-	// Data = icon.Datum;
+	local SquadDetails Detail;
+	local Texture2D StaffPicture;
+	Detail = Data.Data;
 	DialogData.eType = eDialog_Normal;
-	DialogData.strTitle = "This is a title";
+	DialogData.strTitle = Data.SquadName;
 	DialogData.strAccept = class'UIDialogueBox'.default.m_strDefaultAcceptLabel;
-	StrDetails = "This is where squad information will go";
+	StrDetails = "";
 	DialogData.strText = StrDetails;
-	// DialogData.strImagePath = class'UIUtilities_Image'.static.ValidateImagePath("img:///"$Data.MapImagePath);
-	// DialogData.strImagePath = class'UIUtilities_Image'.static.ValidateImagePath(Data.ObjectiveImagePath); // this ui does not allow two images
+	DialogData.strImagePath = class'UIUtilities_Image'.static.ValidateImagePath(Data.SquadIcon);
 	Movie.Pres.UIRaiseDialog( DialogData );
 }
 
@@ -75,6 +79,7 @@ simulated function PopulateListInstantly() {
 	local int i;
 	Stats = XComGameState_SquadStats(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_SquadStats', true));
 	for (i = 0; i < Stats.SquadData.Length; i++) {
+		m_kList.OnItemClicked = OnListItemClicked;
 		Spawn(class'SquadScreen_ListItem', m_kList.itemContainer).InitListItem(Stats.SquadData[i]);
 	}
 	MC.FunctionString("SetEmptyLabel", Stats.SquadData.Length == 0 ? "No Squads Created": "");

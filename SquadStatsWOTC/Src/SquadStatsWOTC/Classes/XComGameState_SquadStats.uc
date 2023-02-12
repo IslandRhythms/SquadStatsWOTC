@@ -87,10 +87,11 @@ function UpdateSquadData() {
 		SquadData[Index].NumMissions += 1.0;
 		Unit = Squad.GetSoldier(0);
 		SquadData[Index].CurrentSquadLeader = Unit.GetFullName();
+		SquadData[Index].DeceasedMembers = UpdateDeceasedSquadMembers(SquadData[Index].DeceasedMembers);
+		// SquadData[Index].PastMembers = UpdateRosterHistory(Squad, SquadData[Index].CurrentMembers);
+		UpdateRosterHistory(Squad, SquadData[Index].CurrentMembers, SquadData[Index].PastMembers);
 		SquadData[Index].CurrentMembers.Length = 0;
 		SquadData[Index].CurrentMembers = UpdateCurrentMembers(Squad);
-		SquadData[Index].DeceasedMembers = UpdateDeceasedSquadMembers(SquadData[Index].DeceasedMembers);
-		SquadData[Index].PastMembers = UpdateRosterHistory(Squad, SquadData[Index].CurrentMembers);
 
 	}
 	// TODO: iterate through all the squads to see if any have been deleted.
@@ -142,31 +143,32 @@ function array<String> UpdateDeceasedSquadMembers(array<String> Dead) {
  * This function checks the current members assigned to the squad, and see if it matches what's in the data
  * If not, it updates the array accordingly and returns an array of past members.
 */
-function array<SoldierDetails> UpdateRosterHistory(XComGameState_LWPersistentSquad Squad, array<SoldierDetails> CurrentMembers) {
+function UpdateRosterHistory(XComGameState_LWPersistentSquad Squad, array<SoldierDetails> CurrentMembers, array<SoldierDetails> PastMembers) {
 	local XComGameState_Unit Unit;
-	local array<XComGameState_Unit> Units;
+	local array<StateObjectReference> Units;
 	local StateObjectReference UnitRef;
 	local string FullName;
-	local int Index, Exists, Val;
-	local array<SoldierDetails> UpdatedList; // this will be assigned to the past members array
+	local int Index, Exists, Former;
 
-	Units = Squad.GetSoldiers(); // This is different from the Units that were deployed.
-	/*  Squad.GetSoldiers() gets the soldiers assigned to the squad. Past soldiers would no longer be in this list. But we should have a record in CurrentMembers
+	Units = Squad.GetSoldierRefs(); // This is different from the Units that were deployed.
+	/*  Squad.GetSoldierRefs() gets the refs to the soldiers assigned to the squad. Past soldiers would no longer be in this list. But we should have a record in CurrentMembers
 		If CurrentMembers doesn't contain any of these troops, then the missing ones are past members.
 	*/
 	for (Index = 0; Index < CurrentMembers.Length; Index++) {
-		// Perhaps the ObjectID is lost when calling Squad.GetSoldiers?
-		// maybe try just getting the raw array of ObjectIDs and do the populating ourself.
-		// Exists = Units.Find('ObjectID', CurrentMembers[Index].SoldierID); // Error, Type mismatch in find(...)
+		Exists = Units.Find('ObjectID', CurrentMembers[Index].SoldierID);
 		if (Exists == INDEX_NONE) {
 			// The soldier is not in the current members array. Therefore, they are now a past member.
-			UpdatedList.AddItem(CurrentMembers[Index]);
+			// Now check if they have been a past member before
+			Former = PastMembers.Find('SoldierID', CurrentMembers[Index].SoldierID);
+			if (Former == INDEX_NONE) {
+				PastMembers.AddItem(CurrentMembers[Index]);
+			}
 		}
 	}
-	return UpdatedList;
 }
 
 // resets the array and populates with Squad.GetSoldiers();
+// must run after update roster history
 function array<SoldierDetails> UpdateCurrentMembers(XComGameState_LWPersistentSquad Squad) {
 	local SoldierDetails Data;
 	local array <XComGameState_Unit> Units;
@@ -177,6 +179,8 @@ function array<SoldierDetails> UpdateCurrentMembers(XComGameState_LWPersistentSq
 	Units = Squad.GetSoldiers();
 
 	for (Index = 0; Index < Units.Length; Index++) {
+	// I feel like there is a bug on this line.
+		`log(Units[Index].ObjectID);
 		Data.SoldierID = Units[Index].ObjectID;
 		FullName = Units[Index].GetFullName();
 		Data.FullName = FullName;

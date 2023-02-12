@@ -156,6 +156,7 @@ function array<SoldierDetails> UpdateRosterHistory(XComGameState_LWPersistentSqu
 	*/
 	for (Index = 0; Index < CurrentMembers.Length; Index++) {
 		// Perhaps the ObjectID is lost when calling Squad.GetSoldiers?
+		// maybe try just getting the raw array of ObjectIDs and do the populating ourself.
 		// Exists = Units.Find('ObjectID', CurrentMembers[Index].SoldierID); // Error, Type mismatch in find(...)
 		if (Exists == INDEX_NONE) {
 			// The soldier is not in the current members array. Therefore, they are now a past member.

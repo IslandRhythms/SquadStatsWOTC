@@ -87,6 +87,8 @@ function UpdateSquadData() {
 		SquadData[Index].NumMissions += 1.0;
 		Unit = Squad.GetSoldier(0);
 		SquadData[Index].CurrentSquadLeader = Unit.GetFullName();
+		SquadData[Index].CurrentMembers.Length = 0;
+		SquadData[Index].CurrentMembers = UpdateCurrentMembers(Squad);
 		SquadData[Index].DeceasedMembers = UpdateDeceasedSquadMembers(SquadData[Index].DeceasedMembers);
 		SquadData[Index].PastMembers = UpdateRosterHistory(Squad, SquadData[Index].CurrentMembers);
 
@@ -123,6 +125,7 @@ function array<String> UpdateDeceasedSquadMembers(array<String> Dead) {
 	for (Index = 0; Index < Dead.Length; Index++) {
 		UpdatedList.AddItem(Dead[Index]);
 	}
+	// need to handle case where the deceased solider was borrowed from another squad
 	foreach `XCOMHQ.Squad(UnitRef)
 	{
 		Unit = XComGameState_Unit(`XCOMHISTORY.GetGameStateForObjectID(UnitRef.ObjectID));
@@ -139,31 +142,47 @@ function array<String> UpdateDeceasedSquadMembers(array<String> Dead) {
  * This function checks the current members assigned to the squad, and see if it matches what's in the data
  * If not, it updates the array accordingly and returns an array of past members.
 */
-function UpdateRosterHistory(XComGameState_LWPersistentSquad Squad, array<SoldierDetails> CurrentMembers) {
+function array<SoldierDetails> UpdateRosterHistory(XComGameState_LWPersistentSquad Squad, array<SoldierDetails> CurrentMembers) {
 	local XComGameState_Unit Unit;
 	local array<XComGameState_Unit> Units;
 	local StateObjectReference UnitRef;
 	local string FullName;
-	local int Index, Exists;
+	local int Index, Exists, Val;
+	local array<SoldierDetails> UpdatedList; // this will be assigned to the past members array
 
 	Units = Squad.GetSoldiers(); // This is different from the Units that were deployed.
 	/*  Squad.GetSoldiers() gets the soldiers assigned to the squad. Past soldiers would no longer be in this list. But we should have a record in CurrentMembers
 		If CurrentMembers doesn't contain any of these troops, then the missing ones are past members.
 	*/
-	foreach `XCOMHQ.Squad(UnitRef)
-	{
-		Unit = XComGameState_Unit(`XCOMHISTORY.GetGameStateForObjectID(UnitRef.ObjectID));
-		Exists = CurrentMembers.Find('SoldierID', UnitRef.ObjectID);
-		if (Exists != INDEX_NONE) {
-
+	for (Index = 0; Index < CurrentMembers.Length; Index++) {
+		// Perhaps the ObjectID is lost when calling Squad.GetSoldiers?
+		// Exists = Units.Find('ObjectID', CurrentMembers[Index].SoldierID); // Error, Type mismatch in find(...)
+		if (Exists == INDEX_NONE) {
+			// The soldier is not in the current members array. Therefore, they are now a past member.
+			UpdatedList.AddItem(CurrentMembers[Index]);
 		}
-		// FullName = Unit.GetFullName();
-		// Index = CurrentMembers.Find(,FullName);
 	}
+	return UpdatedList;
 }
 
 // resets the array and populates with Squad.GetSoldiers();
-function UpdateCurrentMembers() {
+function array<SoldierDetails> UpdateCurrentMembers(XComGameState_LWPersistentSquad Squad) {
+	local SoldierDetails Data;
+	local array <XComGameState_Unit> Units;
+	local array<SoldierDetails> UpdatedList;
+	local int Index;
+	local string FullName;
+
+	Units = Squad.GetSoldiers();
+
+	for (Index = 0; Index < Units.Length; Index++) {
+		Data.SoldierID = Units[Index].ObjectID;
+		FullName = Units[Index].GetFullName();
+		Data.FullName = FullName;
+		UpdatedList.AddItem(Data);
+	}
+
+	return UpdatedList;
 
 }
 

@@ -13,11 +13,12 @@ struct SquadDetails {
 	var array<String> DeceasedMembers; // can keep as an array of strings cause once they're dead, there is no coming back.
 	var array<String> PastSquadNames;
 	var array<String> MissionNames;
-	var float MissionClearanceRate;
 	var float WinRateAgainstWarlock;
 	var float WinRateAgainstHunter;
 	var float WinRateAgainstAssassin;
 	var float NumMissions;
+	var float Wins;
+	var string MissionClearanceRate;
 	var string SquadInceptionDate;
 	var string SquadIcon;
 	var string SquadName;
@@ -32,7 +33,6 @@ struct ChosenInformation {
 	var string ChosenName;
 	var float NumEncounters;
 	var float NumDefeats;
-	var int CampaignIndex;
 };
 
 
@@ -46,11 +46,36 @@ function UpdateSquadData() {
 	local SquadDetails EntryData;
 	local XComGameState_BattleData BattleData;
 	local XComGameState_Unit Unit;
-	local int Index, Exists, Increase;
+	local int Index, Exists;
+	local XComGameState_AdventChosen ChosenState;
+	local ChosenInformation MiniBoss;
 
 	SquadMgr = XComGameState_LWSquadManager(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_LWSquadManager', true));
 	Squad = XComGameState_LWPersistentSquad(`XCOMHISTORY.GetGameStateForObjectID(SquadMgr.LastMissionSquad.ObjectID));
 	BattleData = XComGameState_BattleData(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_BattleData'));
+	// Chosen Data stuff
+	if(BattleData.ChosenRef.ObjectID != 0) {
+		ChosenState = XComGameState_AdventChosen(`XCOMHISTORY.GetGameStateForObjectID(BattleData.ChosenRef.ObjectID));
+		ChosenName = ChosenState.FirstName $ " " ChosenState.NickName $ " " $ ChosenState.LastName;
+		Exists = TheChosen.Find('ChosenName', ChosenName);
+		// The chosen isn't in our db yet. Set them up.
+		if (Exists == INDEX_NONE) {
+			MiniBoss.ChosenType = string(ChosenState.GetMyTemplateName());
+			MiniBoss.ChosenType = Split(MiniBoss.ChosenType, "_", true);
+			MiniBoss.ChosenName = ChosenName;
+			MiniBoss.NumEncounters = 1.0;
+			if (BattleData.bChosenLost) {
+				MiniBoss.NumDefeats += 1.0;
+			}
+			TheChosen.AddItem(MiniBoss);
+			UpdateClearanceRateAgainstChosen();
+		} else {
+			// do chosen information processing here
+			TheChosen[Exists];
+			// do the rest here. Or maybe do all of it in the function.
+			UpdateClearanceRateAgainstChosen(TheChosen[Exists].ChosenName, BattleData, );
+		}
+	}
 	// Check if the Squad already exists in our Data
 	Index = SquadData.Find('SquadID', SquadMgr.LastMissionSquad.ObjectID);
 	if (BattleData.m_strOpName == "Operation Gatecrasher") {
@@ -88,10 +113,10 @@ function UpdateSquadData() {
 		Unit = Squad.GetSoldier(0);
 		SquadData[Index].CurrentSquadLeader = Unit.GetFullName();
 		SquadData[Index].DeceasedMembers = UpdateDeceasedSquadMembers(SquadData[Index].DeceasedMembers);
-		// SquadData[Index].PastMembers = UpdateRosterHistory(Squad, SquadData[Index].CurrentMembers);
 		UpdateRosterHistory(Squad, SquadData[Index].CurrentMembers, SquadData[Index].PastMembers);
 		SquadData[Index].CurrentMembers.Length = 0;
 		SquadData[Index].CurrentMembers = UpdateCurrentMembers(Squad);
+		UpdateClearanceRate(BattleData, SquadData[Index]);
 
 	}
 	// TODO: iterate through all the squads to see if any have been deleted.
@@ -107,11 +132,16 @@ function UpdateSquadStatus() {
 
 }
 
-function UpdateClearanceRate() {
-
+function UpdateClearanceRate(XComGameState_BattleData BattleData, SquadDetails SquadData) {
+	if (BattleData.bLocalPlayerWon && !BattleData.bMissionAborted) {
+		SquadData.Wins += 1.0;
+		SquadData.MissionClearanceRate = (SquadData.Wins/ SquadData.NumMissions) * 100 $ "%";
+	} else {
+		SquadData.MissionClearanceRate = (SquadData.Wins/ SquadData.NumMissions) * 100 $ "%";
+	}
 }
 
-function UpdateClearanceRateAgainstChosen(string Chosen) {
+function UpdateClearanceRateAgainstChosen(string Chosen, XComGameState_BattleData BattleData, SquadDetails SquadData) {
 
 }
 

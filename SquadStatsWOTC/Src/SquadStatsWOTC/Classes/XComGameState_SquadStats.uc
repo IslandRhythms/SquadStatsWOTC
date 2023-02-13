@@ -53,29 +53,6 @@ function UpdateSquadData() {
 	SquadMgr = XComGameState_LWSquadManager(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_LWSquadManager', true));
 	Squad = XComGameState_LWPersistentSquad(`XCOMHISTORY.GetGameStateForObjectID(SquadMgr.LastMissionSquad.ObjectID));
 	BattleData = XComGameState_BattleData(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_BattleData'));
-	// Chosen Data stuff
-	if(BattleData.ChosenRef.ObjectID != 0) {
-		ChosenState = XComGameState_AdventChosen(`XCOMHISTORY.GetGameStateForObjectID(BattleData.ChosenRef.ObjectID));
-		ChosenName = ChosenState.FirstName $ " " ChosenState.NickName $ " " $ ChosenState.LastName;
-		Exists = TheChosen.Find('ChosenName', ChosenName);
-		// The chosen isn't in our db yet. Set them up.
-		if (Exists == INDEX_NONE) {
-			MiniBoss.ChosenType = string(ChosenState.GetMyTemplateName());
-			MiniBoss.ChosenType = Split(MiniBoss.ChosenType, "_", true);
-			MiniBoss.ChosenName = ChosenName;
-			MiniBoss.NumEncounters = 1.0;
-			if (BattleData.bChosenLost) {
-				MiniBoss.NumDefeats += 1.0;
-			}
-			TheChosen.AddItem(MiniBoss);
-			UpdateClearanceRateAgainstChosen();
-		} else {
-			// do chosen information processing here
-			TheChosen[Exists];
-			// do the rest here. Or maybe do all of it in the function.
-			UpdateClearanceRateAgainstChosen(TheChosen[Exists].ChosenName, BattleData, );
-		}
-	}
 	// Check if the Squad already exists in our Data
 	Index = SquadData.Find('SquadID', SquadMgr.LastMissionSquad.ObjectID);
 	if (BattleData.m_strOpName == "Operation Gatecrasher") {
@@ -103,6 +80,29 @@ function UpdateSquadData() {
 			Unit = Squad.GetSoldier(0);
 			EntryData.CurrentSquadLeader = Unit.GetFullName();
 			EntryData.bIsActive = true;
+			// Chosen Data stuff
+			if(BattleData.ChosenRef.ObjectID != 0) {
+				ChosenState = XComGameState_AdventChosen(`XCOMHISTORY.GetGameStateForObjectID(BattleData.ChosenRef.ObjectID));
+				ChosenName = ChosenState.FirstName $ " " ChosenState.NickName $ " " $ ChosenState.LastName;
+				Exists = TheChosen.Find('ChosenName', ChosenName);
+				// The chosen isn't in our db yet. Set them up.
+				if (Exists == INDEX_NONE) {
+					MiniBoss.ChosenType = string(ChosenState.GetMyTemplateName());
+					MiniBoss.ChosenType = Split(MiniBoss.ChosenType, "_", true);
+					MiniBoss.ChosenName = ChosenName;
+					MiniBoss.NumEncounters = 1.0;
+					if (BattleData.bChosenLost) {
+						MiniBoss.NumDefeats += 1.0;
+					}
+					TheChosen.AddItem(MiniBoss);
+					UpdateClearanceRateAgainstChosen();
+				} else {
+					// do chosen information processing here
+					TheChosen[Exists];
+					// do the rest here. Or maybe do all of it in the function.
+					UpdateClearanceRateAgainstChosen(TheChosen[Exists].ChosenName, BattleData, );
+				}
+			}
 			SquadData.AddItem(EntryData); // should only do this on cases where the entry wasn't in the db
 		}
 	} else { // The squad returning from the mission exists in the db
@@ -117,6 +117,29 @@ function UpdateSquadData() {
 		SquadData[Index].CurrentMembers.Length = 0;
 		SquadData[Index].CurrentMembers = UpdateCurrentMembers(Squad);
 		UpdateClearanceRate(BattleData, SquadData[Index]);
+		// Chosen Data stuff
+		if(BattleData.ChosenRef.ObjectID != 0) {
+			ChosenState = XComGameState_AdventChosen(`XCOMHISTORY.GetGameStateForObjectID(BattleData.ChosenRef.ObjectID));
+			ChosenName = ChosenState.FirstName $ " " ChosenState.NickName $ " " $ ChosenState.LastName;
+			Exists = TheChosen.Find('ChosenName', ChosenName);
+			// The chosen isn't in our db yet. Set them up.
+			if (Exists == INDEX_NONE) {
+				MiniBoss.ChosenType = string(ChosenState.GetMyTemplateName());
+				MiniBoss.ChosenType = Split(MiniBoss.ChosenType, "_", true);
+				MiniBoss.ChosenName = ChosenName;
+				MiniBoss.NumEncounters = 1.0;
+				if (BattleData.bChosenLost) {
+					MiniBoss.NumDefeats += 1.0;
+				}
+				TheChosen.AddItem(MiniBoss);
+				UpdateClearanceRateAgainstChosen();
+			} else {
+				// do chosen information processing here
+				TheChosen[Exists];
+				// do the rest here. Or maybe do all of it in the function.
+				UpdateClearanceRateAgainstChosen(TheChosen[Exists].ChosenName, BattleData, SquadData[Index]);
+			}
+		}
 
 	}
 	// TODO: iterate through all the squads to see if any have been deleted.

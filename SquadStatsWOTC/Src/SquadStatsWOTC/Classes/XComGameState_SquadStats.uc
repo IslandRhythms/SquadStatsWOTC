@@ -156,7 +156,7 @@ function UpdateClearanceRates(XComGameState_BattleData BattleData, SquadDetails 
 		SquadData.MissionNamesLosses.AddItem(BattleData.m_strOpName);
 		SquadData.MissionClearanceRate = (SquadData.Wins / SquadData.NumMissions) * 100 $ "%";
 	}
-	if (BattleData.ChosenRef.ObjectID != 0) { // I should be able to put all the stuff that relies on this check in one function
+	if (BattleData.ChosenRef.ObjectID != 0) { // I should be able to put all the stuff that relies on this check in one function, but I don't want to take that time.
 		ChosenState = XComGameState_AdventChosen(`XCOMHISTORY.GetGameStateForObjectID(BattleData.ChosenRef.ObjectID));
 		ChosenType = GetChosenType(ChosenState);
 		Chosen = SquadData.ChosenEncounters.Find('ChosenType', ChosenType);

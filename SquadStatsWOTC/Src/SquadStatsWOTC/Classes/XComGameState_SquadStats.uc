@@ -47,6 +47,7 @@ function UpdateSquadData() {
 	local XComGameState_LWPersistentSquad Squad;
 	local SquadDetails EntryData;
 	local XComGameState_BattleData BattleData;
+	local array<XComGameState_Unit> Units;
 	local XComGameState_Unit Unit;
 	local int Index, Exists;
 	local XComGameState_AdventChosen ChosenState;
@@ -78,8 +79,9 @@ function UpdateSquadData() {
 			EntryData.SquadIcon = Squad.SquadImagePath != "" ? Squad.SquadImagePath : Squad.DefaultSquadImagePath;
 			EntryData.SquadName = Squad.sSquadName != "" ? Squad.sSquadName : "XCOM";
 			EntryData.NumMissions = 1.0;
-			Unit = Squad.GetSoldier(0);
-			EntryData.CurrentSquadLeader = Unit.GetFullName();
+			// handle case where first soldier is dead
+			AssignSquadLeader(Squad, EntryData);
+			EntryData.DeceasedMembers = UpdateDeceasedSquadMembers(EntryData.DeceasedMembers, SquadData, Squad, SquadMgr);
 			EntryData.bIsActive = true;
 			// Chosen Data stuff
 			if(BattleData.ChosenRef.ObjectID != 0) {
@@ -93,9 +95,8 @@ function UpdateSquadData() {
 		SquadData[Index].SquadName = Squad.sSquadName; // could change the name, need to stay up to date
 		SquadData[Index].SquadIcon = Squad.SquadImagePath != "" ? Squad.SquadImagePath : Squad.DefaultSquadImagePath; // could change the icon, stay up to date
 		SquadData[Index].NumMissions += 1.0;
-		Unit = Squad.GetSoldier(0);
-		SquadData[Index].CurrentSquadLeader = Unit.GetFullName();
-		SquadData[Index].DeceasedMembers = UpdateDeceasedSquadMembers(SquadData[Index].DeceasedMembers);
+		AssignSquadLeader(Squad, SquadData[Index]);
+		SquadData[Index].DeceasedMembers = UpdateDeceasedSquadMembers(SquadData[Index].DeceasedMembers, SquadData, Squad, SquadMgr);
 		UpdateRosterHistory(Squad, SquadData[Index].CurrentMembers, SquadData[Index].PastMembers);
 		SquadData[Index].CurrentMembers.Length = 0;
 		SquadData[Index].CurrentMembers = UpdateCurrentMembers(Squad);
@@ -107,19 +108,33 @@ function UpdateSquadData() {
 		UpdateClearanceRates(BattleData, SquadData[Index]);
 	}
 	// TODO: iterate through all the squads to see if any have been deleted.
+	for(Index = 0; Index < SquadData.Length; Index++) {
+		Exists = SquadMgr.Squads.Find('ObjectID', SquadData[Index].SquadID);
+		// the squad does not exist in the squad manager anymore. They are out of commission.
+		if (Exists == INDEX_NONE) {
+			SquadData[Index].bIsActive = false;
+		}
+	}
 
 }
-/*
- * Go through all the squads in the squad manager
- * and check if a squad in our array is missing.
- * If so, update the status of our squad to false.
- */
-// maybe add a new property that stores the time the squad was reactivated? array?
-function UpdateSquadStatus() {
 
+function AssignSquadLeader(XComGameState_LWPersistentSquad Squad, SquadDetails SquadData) {
+	local array<XComGameState_Unit> Units;
+	local XComGameState_Unit Unit;
+	local int Index;
+
+
+	Units = Squad.GetSoldiers();
+	for (Index = 0; Index < Units.Length; Index++) {
+		Unit = Squad.GetSoldier(Index);
+		if (Unit.IsAlive()) {
+			SquadData.CurrentSquadLeader = Unit.GetFullName();
+			break;
+		}
+	}
+	SquadData.CurrentSquadLeader = "No Squad Leader Currently Assigned";
 }
 
-// TODO: Maybe move the win loss calculation to UpdateClearanceRates since it has to calculate the overall win loss
 function UpdateChosenInformation(XComGameState_AdventChosen ChosenState, XComGameState_BattleData BattleData, SquadDetails SquadData) {
 	local string ChosenName;
 	local int Exists;
@@ -180,10 +195,11 @@ function string GetChosenType(XComGameState_AdventChosen ChosenState) {
 
 
 // for updating var array<String> DeceasedMembers;
-function array<String> UpdateDeceasedSquadMembers(array<String> Dead) {
+function array<String> UpdateDeceasedSquadMembers(array<String> Dead, array<SquadDetails> SquadData, XComGameState_LWPersistentSquad Squad, XComGameState_LWSquadManager SquadMgr) {
 	local XcomGameState_Unit Unit;
 	local StateObjectReference UnitRef;
-	local int Index;
+	local XComGameState_LWPersistentSquad Team;
+	local int Index, i, Exists, Found;
 	local string FullName;
 	local array<String> UpdatedList;
 	for (Index = 0; Index < Dead.Length; Index++) {
@@ -195,7 +211,26 @@ function array<String> UpdateDeceasedSquadMembers(array<String> Dead) {
 		Unit = XComGameState_Unit(`XCOMHISTORY.GetGameStateForObjectID(UnitRef.ObjectID));
 		if (!Unit.IsAlive()) {
 			FullName = Unit.GetFullName();
-			UpdatedList.AddItem(FullName);
+			if (Squad.IsSoldierTemporary(UnitRef)) {
+				// find the squad this soldier belongs to and add them to the deceased array
+				for (Index = 0; Index < SquadMgr.Squads.Length; Index++) {
+					Team = SquadMgr.GetSquad(Index);
+					Exists = Team.SquadSoldiers.Find('ObjectID', UnitRef.ObjectID);
+					// This soldier belongs to this squad
+					if (Exists != INDEX_NONE) {
+					// go through our array and find our records for that squad
+						for (i = 0; i < SquadData.Length; i++) {
+							Found = SquadData.Find('SquadID', SquadMgr.Squads[Index].ObjectID);
+							// found the record for the squad
+							if (Found != INDEX_NONE) {
+								SquadData[Found].DeceasedMembers.AddItem(FullName);
+							}
+						}
+					}
+				}
+			} else {
+				UpdatedList.AddItem(FullName);
+			}
 		}
 	}
 	return UpdatedList;

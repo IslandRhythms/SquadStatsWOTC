@@ -11,20 +11,20 @@ struct ChosenInformation {
 	var string ChosenType;
 	var string ChosenName;
 	var float NumEncounters;
-	var float NumDefeats;
+	var float NumDefeats; // how many times this squad has defeated this chosen.
 };
 
 struct SquadDetails {
 	var array<SoldierDetails> CurrentMembers;
 	var array<SoldierDetails> PastMembers;
-	var array<String> DeceasedMembers; // can keep as an array of strings cause once they're dead, there is no coming back.
+	var array<String> DeceasedMembers; // can keep as an array of strings because once they're dead, there is no coming back.
 	var array<String> PastSquadNames;
 	var array<String> MissionNamesWins;
 	var array<String> MissionNamesLosses;
 	var array<ChosenInformation> ChosenEncounters;
-	var float WinRateAgainstWarlock;
-	var float WinRateAgainstHunter;
-	var float WinRateAgainstAssassin;
+	var string WinRateAgainstWarlock;
+	var string WinRateAgainstHunter;
+	var string WinRateAgainstAssassin;
 	var float NumMissions;
 	var float Wins;
 	var string MissionClearanceRate;
@@ -78,7 +78,6 @@ function UpdateSquadData() {
 			EntryData.SquadIcon = Squad.SquadImagePath != "" ? Squad.SquadImagePath : Squad.DefaultSquadImagePath;
 			EntryData.SquadName = Squad.sSquadName != "" ? Squad.sSquadName : "XCOM";
 			EntryData.NumMissions = 1.0;
-			UpdateClearanceRate(BattleData, EntryData)
 			Unit = Squad.GetSoldier(0);
 			EntryData.CurrentSquadLeader = Unit.GetFullName();
 			EntryData.bIsActive = true;
@@ -87,12 +86,12 @@ function UpdateSquadData() {
 				ChosenState = XComGameState_AdventChosen(`XCOMHISTORY.GetGameStateForObjectID(BattleData.ChosenRef.ObjectID));
 				UpdateChosenInformation(ChosenState, BattleData, EntryData);
 			}
+			UpdateClearanceRates(BattleData, EntryData);
 			SquadData.AddItem(EntryData); // should only do this on cases where the entry wasn't in the db
 		}
 	} else { // The squad returning from the mission exists in the db
 		SquadData[Index].SquadName = Squad.sSquadName; // could change the name, need to stay up to date
 		SquadData[Index].SquadIcon = Squad.SquadImagePath != "" ? Squad.SquadImagePath : Squad.DefaultSquadImagePath; // could change the icon, stay up to date
-		SquadData[Index].MissionNames.AddItem(BattleData.m_strOpName);
 		SquadData[Index].NumMissions += 1.0;
 		Unit = Squad.GetSoldier(0);
 		SquadData[Index].CurrentSquadLeader = Unit.GetFullName();
@@ -100,12 +99,12 @@ function UpdateSquadData() {
 		UpdateRosterHistory(Squad, SquadData[Index].CurrentMembers, SquadData[Index].PastMembers);
 		SquadData[Index].CurrentMembers.Length = 0;
 		SquadData[Index].CurrentMembers = UpdateCurrentMembers(Squad);
-		UpdateClearanceRate(BattleData, SquadData[Index]);
 		// Chosen Data stuff
 		if(BattleData.ChosenRef.ObjectID != 0) {
 			ChosenState = XComGameState_AdventChosen(`XCOMHISTORY.GetGameStateForObjectID(BattleData.ChosenRef.ObjectID));
 			UpdateChosenInformation(ChosenState, BattleData, SquadData[Index]);
 		}
+		UpdateClearanceRates(BattleData, SquadData[Index]);
 	}
 	// TODO: iterate through all the squads to see if any have been deleted.
 
@@ -125,12 +124,11 @@ function UpdateChosenInformation(XComGameState_AdventChosen ChosenState, XComGam
 	local string ChosenName;
 	local int Exists;
 	local ChosenInformation MiniBoss;
-	ChosenName = ChosenState.FirstName $ " " ChosenState.NickName $ " " $ ChosenState.LastName;
+	ChosenName = ChosenState.FirstName $ " " $ ChosenState.NickName $ " " $ ChosenState.LastName;
 	Exists = SquadData.ChosenEncounters.Find('ChosenName', ChosenName);
 	// The Squad has not encountered this chosen yet
 	if (Exists == INDEX_NONE) {
-		MiniBoss.ChosenType = string(ChosenState.GetMyTemplateName());
-		MiniBoss.ChosenType = Split(MiniBoss.ChosenType, "_", true);
+		MiniBoss.ChosenType = GetChosenType(ChosenState);
 		MiniBoss.ChosenName = ChosenName;
 		MiniBoss.NumEncounters = 1.0;
 		if (BattleData.bChosenLost) {
@@ -143,23 +141,41 @@ function UpdateChosenInformation(XComGameState_AdventChosen ChosenState, XComGam
 		if (BattleData.bChosenLost) {
 			SquadData.ChosenEncounters[Exists].NumDefeats += 1.0;
 		}
-		// do the rest here. Or maybe do all of it in the function.
 	}
 }
 
 function UpdateClearanceRates(XComGameState_BattleData BattleData, SquadDetails SquadData) {
+	local XComGameState_AdventChosen ChosenState;
+	local int Chosen;
+	local string ChosenType;
 	if (BattleData.bLocalPlayerWon && !BattleData.bMissionAborted) {
 		SquadData.Wins += 1.0;
 		SquadData.MissionNamesWins.AddItem(BattleData.m_strOpName);
-		SquadData.MissionClearanceRate = (SquadData.Wins/ SquadData.NumMissions) * 100 $ "%";
+		SquadData.MissionClearanceRate = (SquadData.Wins / SquadData.NumMissions) * 100 $ "%";
 	} else {
 		SquadData.MissionNamesLosses.AddItem(BattleData.m_strOpName);
-		SquadData.MissionClearanceRate = (SquadData.Wins/ SquadData.NumMissions) * 100 $ "%";
+		SquadData.MissionClearanceRate = (SquadData.Wins / SquadData.NumMissions) * 100 $ "%";
+	}
+	if (BattleData.ChosenRef.ObjectID != 0) { // I should be able to put all the stuff that relies on this check in one function
+		ChosenState = XComGameState_AdventChosen(`XCOMHISTORY.GetGameStateForObjectID(BattleData.ChosenRef.ObjectID));
+		ChosenType = GetChosenType(ChosenState);
+		Chosen = SquadData.ChosenEncounters.Find('ChosenType', ChosenType);
+		if (ChosenType == "Warlock") {
+			SquadData.WinRateAgainstWarlock = (SquadData.ChosenEncounters[Chosen].NumDefeats / SquadData.ChosenEncounters[Chosen].NumEncounters) * 100 $ "%";
+		} else if (ChosenType == "Hunter") {
+			SquadData.WinRateAgainstHunter = (SquadData.ChosenEncounters[Chosen].NumDefeats / SquadData.ChosenEncounters[Chosen].NumEncounters) * 100 $ "%";
+		} else {
+			SquadData.WinRateAgainstAssassin = (SquadData.ChosenEncounters[Chosen].NumDefeats / SquadData.ChosenEncounters[Chosen].NumEncounters) * 100 $ "%";
+		}
+		
 	}
 }
-// maybe just do what this is suppose to do in UpdateChosenInformation
-function UpdateClearanceRateAgainstChosen(string Chosen, XComGameState_BattleData BattleData, SquadDetails SquadData) {
 
+function string GetChosenType(XComGameState_AdventChosen ChosenState) {
+	local string ChosenType;
+	ChosenType = string(ChosenState.GetMyTemplateName());
+	ChosenType = Split(ChosenType, "_", true);
+	return ChosenType;
 }
 
 

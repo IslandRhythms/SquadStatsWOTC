@@ -34,7 +34,7 @@ simulated function SquadScreen_ListItem InitListItem(SquadDetails Entry)
 
 	UpdateData(); // this is really 'set initial data' as the listitem gets destroyed and recreateds
 
-	SetHudHeadIcon(); // pass data.averagerank here
+	SetHudHeadIcon(Data.AverageRank); // pass data.averagerank here
 
 	return self;
 }
@@ -63,10 +63,10 @@ simulated function SetHudHeadIcon(optional string NewPath)
 	// CharTemplate = Unit.GetMyTemplate();
 
 	//Add Target Head Icon
-	UnitTypeImage = "img:///UILibrary_Common.TargetIcons.target_advent";
+	UnitTypeImage = NewPath;
 
 	// if(CharTemplate.StrTargetIconImage != "")	{ UnitTypeImage = "img:///" $ CharTemplate.StrTargetIconImage; }
-	if(NewPath != "")							{ UnitTypeImage = "img:///" $ NewPath; }
+	// if(NewPath != "")							{ UnitTypeImage = "img:///" $ NewPath; }
 
 	// HudHeadIcon.SetBGColor(GetIconColour(Unit));	
 
@@ -93,12 +93,17 @@ simulated function UpdateData()
 
 	//get country/affiliation flag, or attention flag
 	// do something else here to get the squad logo
-	// FlagImage = GetFlagImage(Unit);
+	// make sure logo has img:/// prefix
+	FlagImage = Data.SquadIcon;
 
 	//get and set display strings
 	UnitsName = Data.SquadName;
-
-	Classification = Data.SquadName@"Classification";
+	// Active or Decomissioned
+	if (Data.bIsActive) {
+		Classification = "Active";
+	} else {
+		Classification = "Decomissioned";
+	}
 
 	// SetLocationOrStatusString(Unit, TemplateName);
 	// LocStatusText.SetTitle(class'UIUtilities_Text'.static.GetColoredText(Caps(m_StrStatus), i_eState, 18, "RIGHT") );
@@ -112,7 +117,7 @@ simulated function UpdateData()
 
 	//Send information to flash aspects
 	// 			(UnitName, UnitSkill, UnitStatus, UnitStatusValue, UnitLocation, UnitCountryFlagPath, bIsDisabled, UnitType, UnitTypeIcon )
-	AS_UpdateData("TEST", "0", Classification, "", "", FlagImage, false, UnitPersonnelType, "");
+	AS_UpdateData(UnitsName, "0", Classification, "", "", FlagImage, false, UnitPersonnelType, "");
 }
 
 simulated function SetLocationOrStatusString(XComGameState_Unit Unit, name TemplateName)
@@ -156,32 +161,6 @@ simulated function bool WasUnitSpark(name TemplateName)
 	}
 
 	return false;
-}
-
-//gets the attention, country or affiliation flag to show
-simulated function string GetFlagImage(XComGameState_Unit Unit)
-{
-	local string FlagImage;
-
-	//set default to units country
-	FlagImage = Unit.GetCountryTemplate().FlagImage;
-
-	if (bNeedsAttention)
-	{
-		FlagImage = "img:///UFOPedia_Core.UIFlag_Attention";
-	}
-
-	if(FlagImage == "" && (Unit.IsSoldier() || Unit.IsScientist() || Unit.IsEngineer() || Unit.GetMyTemplateName() == 'StrategyCentral') )
-	{
-		FlagImage = "img:///UFOPedia_Core.UIFlag_XCom";
-	}
-
-	if (FlagImage == "")
-	{
-		FlagImage = "img:///UFOPedia_Core.UIFlag_Advent";
-	}
-
-	return FlagImage;
 }
 
 //gets a colour for the icon based on conditions

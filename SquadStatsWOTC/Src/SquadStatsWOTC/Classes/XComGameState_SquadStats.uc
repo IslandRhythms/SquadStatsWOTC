@@ -127,29 +127,29 @@ function UpdateSquadData() {
 
 }
 
-function AssignSquadLeader(XComGameState_LWPersistentSquad Squad, SquadDetails SquadData) {
+function AssignSquadLeader(XComGameState_LWPersistentSquad Team, SquadDetails TeamData) {
 	local array<XComGameState_Unit> Units;
 	local XComGameState_Unit Unit;
 	local int Index;
 
 
-	Units = Squad.GetSoldiers();
+	Units = Team.GetSoldiers();
 	for (Index = 0; Index < Units.Length; Index++) {
-		Unit = Squad.GetSoldier(Index);
+		Unit = Team.GetSoldier(Index);
 		if (Unit.IsAlive()) {
-			SquadData.CurrentSquadLeader = Unit.GetFullName();
+			TeamData.CurrentSquadLeader = Unit.GetFullName();
 			break;
 		}
 	}
-	SquadData.CurrentSquadLeader = "No Squad Leader Currently Assigned";
+	TeamData.CurrentSquadLeader = "No Squad Leader Currently Assigned";
 }
 
-function UpdateChosenInformation(XComGameState_AdventChosen ChosenState, XComGameState_BattleData BattleData, SquadDetails SquadData) {
+function UpdateChosenInformation(XComGameState_AdventChosen ChosenState, XComGameState_BattleData BattleData, SquadDetails TeamData) {
 	local string ChosenName;
 	local int Exists;
 	local ChosenInformation MiniBoss;
 	ChosenName = ChosenState.FirstName $ " " $ ChosenState.NickName $ " " $ ChosenState.LastName;
-	Exists = SquadData.ChosenEncounters.Find('ChosenName', ChosenName);
+	Exists = TeamData.ChosenEncounters.Find('ChosenName', ChosenName);
 	// The Squad has not encountered this chosen yet
 	if (Exists == INDEX_NONE) {
 		MiniBoss.ChosenType = GetChosenType(ChosenState);
@@ -158,38 +158,38 @@ function UpdateChosenInformation(XComGameState_AdventChosen ChosenState, XComGam
 		if (BattleData.bChosenLost) {
 			MiniBoss.NumDefeats += 1.0;
 		}
-		SquadData.ChosenEncounters.AddItem(MiniBoss);
+		TeamData.ChosenEncounters.AddItem(MiniBoss);
 	} else {
 		// do chosen information processing here
-		SquadData.ChosenEncounters[Exists].NumEncounters += 1.0;
+		TeamData.ChosenEncounters[Exists].NumEncounters += 1.0;
 		if (BattleData.bChosenLost) {
-			SquadData.ChosenEncounters[Exists].NumDefeats += 1.0;
+			TeamData.ChosenEncounters[Exists].NumDefeats += 1.0;
 		}
 	}
 }
 
-function UpdateClearanceRates(XComGameState_BattleData BattleData, SquadDetails SquadData) {
+function UpdateClearanceRates(XComGameState_BattleData BattleData, SquadDetails TeamData) {
 	local XComGameState_AdventChosen ChosenState;
 	local int Chosen;
 	local string ChosenType;
 	if (BattleData.bLocalPlayerWon && !BattleData.bMissionAborted) {
-		SquadData.Wins += 1.0;
-		SquadData.MissionNamesWins.AddItem(BattleData.m_strOpName);
-		SquadData.MissionClearanceRate = (SquadData.Wins / SquadData.NumMissions) * 100 $ "%";
+		TeamData.Wins += 1.0;
+		TeamData.MissionNamesWins.AddItem(BattleData.m_strOpName);
+		TeamData.MissionClearanceRate = (TeamData.Wins / TeamData.NumMissions) * 100 $ "%";
 	} else {
-		SquadData.MissionNamesLosses.AddItem(BattleData.m_strOpName);
-		SquadData.MissionClearanceRate = (SquadData.Wins / SquadData.NumMissions) * 100 $ "%";
+		TeamData.MissionNamesLosses.AddItem(BattleData.m_strOpName);
+		TeamData.MissionClearanceRate = (TeamData.Wins / TeamData.NumMissions) * 100 $ "%";
 	}
 	if (BattleData.ChosenRef.ObjectID != 0) { // I should be able to put all the stuff that relies on this check in one function, but I don't want to take that time.
 		ChosenState = XComGameState_AdventChosen(`XCOMHISTORY.GetGameStateForObjectID(BattleData.ChosenRef.ObjectID));
 		ChosenType = GetChosenType(ChosenState);
-		Chosen = SquadData.ChosenEncounters.Find('ChosenType', ChosenType);
+		Chosen = TeamData.ChosenEncounters.Find('ChosenType', ChosenType);
 		if (ChosenType == "Warlock") {
-			SquadData.WinRateAgainstWarlock = (SquadData.ChosenEncounters[Chosen].NumDefeats / SquadData.ChosenEncounters[Chosen].NumEncounters) * 100 $ "%";
+			TeamData.WinRateAgainstWarlock = (TeamData.ChosenEncounters[Chosen].NumDefeats / TeamData.ChosenEncounters[Chosen].NumEncounters) * 100 $ "%";
 		} else if (ChosenType == "Hunter") {
-			SquadData.WinRateAgainstHunter = (SquadData.ChosenEncounters[Chosen].NumDefeats / SquadData.ChosenEncounters[Chosen].NumEncounters) * 100 $ "%";
+			TeamData.WinRateAgainstHunter = (TeamData.ChosenEncounters[Chosen].NumDefeats / TeamData.ChosenEncounters[Chosen].NumEncounters) * 100 $ "%";
 		} else {
-			SquadData.WinRateAgainstAssassin = (SquadData.ChosenEncounters[Chosen].NumDefeats / SquadData.ChosenEncounters[Chosen].NumEncounters) * 100 $ "%";
+			TeamData.WinRateAgainstAssassin = (TeamData.ChosenEncounters[Chosen].NumDefeats / TeamData.ChosenEncounters[Chosen].NumEncounters) * 100 $ "%";
 		}
 		
 	}
@@ -204,7 +204,7 @@ function string GetChosenType(XComGameState_AdventChosen ChosenState) {
 
 
 // for updating var array<String> DeceasedMembers;
-function array<String> UpdateDeceasedSquadMembers(array<String> Dead, array<SquadDetails> SquadData, XComGameState_LWPersistentSquad Squad, XComGameState_LWSquadManager SquadMgr) {
+function array<String> UpdateDeceasedSquadMembers(array<String> Dead, array<SquadDetails> TeamData, XComGameState_LWPersistentSquad Roster, XComGameState_LWSquadManager TeamMgr) {
 	local XcomGameState_Unit Unit;
 	local StateObjectReference UnitRef;
 	local XComGameState_LWPersistentSquad Team;
@@ -220,19 +220,19 @@ function array<String> UpdateDeceasedSquadMembers(array<String> Dead, array<Squa
 		Unit = XComGameState_Unit(`XCOMHISTORY.GetGameStateForObjectID(UnitRef.ObjectID));
 		if (!Unit.IsAlive()) {
 			FullName = Unit.GetFullName();
-			if (Squad.IsSoldierTemporary(UnitRef)) {
+			if (Roster.IsSoldierTemporary(UnitRef)) {
 				// find the squad this soldier belongs to and add them to the deceased array
-				for (Index = 0; Index < SquadMgr.Squads.Length; Index++) {
-					Team = SquadMgr.GetSquad(Index);
+				for (Index = 0; Index < TeamMgr.Squads.Length; Index++) {
+					Team = TeamMgr.GetSquad(Index);
 					Exists = Team.SquadSoldiers.Find('ObjectID', UnitRef.ObjectID);
 					// This soldier belongs to this squad
 					if (Exists != INDEX_NONE) {
 					// go through our array and find our records for that squad
-						for (i = 0; i < SquadData.Length; i++) {
-							Found = SquadData.Find('SquadID', SquadMgr.Squads[Index].ObjectID);
+						for (i = 0; i < TeamData.Length; i++) {
+							Found = SquadData.Find('SquadID', TeamMgr.Squads[Index].ObjectID);
 							// found the record for the squad
 							if (Found != INDEX_NONE) {
-								SquadData[Found].DeceasedMembers.AddItem(FullName);
+								TeamData[Found].DeceasedMembers.AddItem(FullName);
 							}
 						}
 					}
@@ -250,14 +250,14 @@ function array<String> UpdateDeceasedSquadMembers(array<String> Dead, array<Squa
  * This function checks the current members assigned to the squad, and see if it matches what's in the data
  * If not, it updates the array accordingly and returns an array of past members.
 */
-function UpdateRosterHistory(XComGameState_LWPersistentSquad Squad, array<SoldierDetails> CurrentMembers, array<SoldierDetails> PastMembers) {
+function UpdateRosterHistory(XComGameState_LWPersistentSquad Team, array<SoldierDetails> CurrentMembers, array<SoldierDetails> PastMembers) {
 	local XComGameState_Unit Unit;
 	local array<StateObjectReference> Units;
 	local StateObjectReference UnitRef;
 	local string FullName;
 	local int Index, Exists, Former;
 
-	Units = Squad.GetSoldierRefs(); // This is different from the Units that were deployed.
+	Units = Team.GetSoldierRefs(); // This is different from the Units that were deployed.
 	/*  Squad.GetSoldierRefs() gets the refs to the soldiers assigned to the squad. Past soldiers would no longer be in this list. But we should have a record in CurrentMembers
 		If CurrentMembers doesn't contain any of these troops, then the missing ones are past members.
 	*/
@@ -277,14 +277,14 @@ function UpdateRosterHistory(XComGameState_LWPersistentSquad Squad, array<Soldie
 
 // resets the array and populates with Squad.GetSoldiers();
 // must run after update roster history
-function array<SoldierDetails> UpdateCurrentMembers(XComGameState_LWPersistentSquad Squad) {
+function array<SoldierDetails> UpdateCurrentMembers(XComGameState_LWPersistentSquad Team) {
 	local SoldierDetails Data;
 	local array <XComGameState_Unit> Units;
 	local array<SoldierDetails> UpdatedList;
 	local int Index;
 	local string FullName;
 
-	Units = Squad.GetSoldiers();
+	Units = Team.GetSoldiers();
 
 	for (Index = 0; Index < Units.Length; Index++) {
 	// I feel like there is a bug on this line.
@@ -301,13 +301,13 @@ function array<SoldierDetails> UpdateCurrentMembers(XComGameState_LWPersistentSq
 
 // instead of returning the name of the rank, return the image.
 // also figure out how to add brigadier image
-function string CalculateAverageRank(XComGameState_LWPersistentSquad Squad) {
+function string CalculateAverageRank(XComGameState_LWPersistentSquad Team) {
 	local array<XComGameState_Unit> Units;
 	local int i, Rank, Result;
 	local float AverageRank;
 	local array<int> Ranks;
 	local string RankResult;
-	Units = Squad.GetSoldiers();
+	Units = Team.GetSoldiers();
 	// put all the soldier ranks in an array
 	for (i = 0; i < Units.Length; i++) {
 		Rank = Units[i].GetRank();
@@ -319,22 +319,25 @@ function string CalculateAverageRank(XComGameState_LWPersistentSquad Squad) {
 	}
 	AverageRank = float(Rank) / float(Units.Length);
 	Result = Round(AverageRank);
+	// assests in the content browser are borked. names look wrong but logos are right.
 	if (Result == 0) {
-		RankResult = "Squaddie";
+		RankResult = "img:///UILibrary_Common.rank_rookie";
 	} else if (Result == 1) {
-		RankResult = "Corporal";
+		RankResult = "img:///UILibrary_Common.rank_squaddie";
 	} else if (Result == 2) {
-		RankResult = "Sergeant";
+		RankResult = "img:///UILibrary_Common.rank_lieutenant";
 	} else if (Result == 3) {
-		RankResult = "Lieutenant";
+		RankResult = "img:///UILibrary_Common.rank_sergeant";
 	} else if (Result == 4) {
-		RankResult = "Captain";
+		RankResult = "img:///UILibrary_Common.rank_captain";
 	} else if (Result == 5) {
-		RankResult = "Major";
+		RankResult = "img:///UILibrary_Common.rank_major";
 	} else if (Result == 6) {
-		RankResult = "Colonel";
+		RankResult = "img:///UILibrary_Common.rank_colonel";
+	} else if (Result == 7) {
+		RankResult = "img:///UILibrary_Common.rank_commander";
 	} else { // LWOTC Support
-		RankResult = "Brigadier";
+		RankResult = "img:///UILibrary_Common.rank_fieldmarshall";
 	}
 	return RankResult;
 

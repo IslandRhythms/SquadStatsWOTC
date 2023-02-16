@@ -31,10 +31,12 @@ struct SquadDetails {
 	var string SquadInceptionDate;
 	var string SquadIcon;
 	var string SquadName;
+	var string AverageRank; // Average Rank of the Squad
 	var string CurrentSquadLeader; // First soldier Added to the Squad. Can change over time
 	var TDateTime RawInception;
 	var bool bIsActive; // If the user deletes a squad, set status to decomissioned. If they remake the squad, we can reaccess the old data. Update ObjectID
 	var int SquadID;
+	var int NumSoldiers; // Number of Soldiers in the Squad
 };
 
 
@@ -82,6 +84,11 @@ function UpdateSquadData() {
 			// handle case where first soldier is dead
 			AssignSquadLeader(Squad, EntryData);
 			EntryData.DeceasedMembers = UpdateDeceasedSquadMembers(EntryData.DeceasedMembers, SquadData, Squad, SquadMgr);
+			EntryData.CurrentMembers.Length = 0;
+			EntryData.CurrentMembers = UpdateCurrentMembers(Squad);
+			Units = Squad.GetSoldiers();
+			EntryData.NumSoldiers = Units.Length;
+			EntryData.AverageRank = CalculateAverageRank(Squad);
 			EntryData.bIsActive = true;
 			// Chosen Data stuff
 			if(BattleData.ChosenRef.ObjectID != 0) {
@@ -100,6 +107,8 @@ function UpdateSquadData() {
 		UpdateRosterHistory(Squad, SquadData[Index].CurrentMembers, SquadData[Index].PastMembers);
 		SquadData[Index].CurrentMembers.Length = 0;
 		SquadData[Index].CurrentMembers = UpdateCurrentMembers(Squad);
+		Units = Squad.GetSoldiers();
+		SquadData[Index].NumSoldiers = Units.Length;
 		// Chosen Data stuff
 		if(BattleData.ChosenRef.ObjectID != 0) {
 			ChosenState = XComGameState_AdventChosen(`XCOMHISTORY.GetGameStateForObjectID(BattleData.ChosenRef.ObjectID));
@@ -287,6 +296,47 @@ function array<SoldierDetails> UpdateCurrentMembers(XComGameState_LWPersistentSq
 	}
 
 	return UpdatedList;
+
+}
+
+// instead of returning the name of the rank, return the image.
+// also figure out how to add brigadier image
+function string CalculateAverageRank(XComGameState_LWPersistentSquad Squad) {
+	local array<XComGameState_Unit> Units;
+	local int i, Rank, Result;
+	local float AverageRank;
+	local array<int> Ranks;
+	local string RankResult;
+	Units = Squad.GetSoldiers();
+	// put all the soldier ranks in an array
+	for (i = 0; i < Units.Length; i++) {
+		Rank = Units[i].GetRank();
+		Ranks.AddItem(Rank);
+	}
+	// now calculate the average
+	for (i = 0; i < Ranks.Length; i++) {
+		Rank += Ranks[i];
+	}
+	AverageRank = float(Rank) / float(Units.Length);
+	Result = Round(AverageRank);
+	if (Result == 0) {
+		RankResult = "Squaddie";
+	} else if (Result == 1) {
+		RankResult = "Corporal";
+	} else if (Result == 2) {
+		RankResult = "Sergeant";
+	} else if (Result == 3) {
+		RankResult = "Lieutenant";
+	} else if (Result == 4) {
+		RankResult = "Captain";
+	} else if (Result == 5) {
+		RankResult = "Major";
+	} else if (Result == 6) {
+		RankResult = "Colonel";
+	} else { // LWOTC Support
+		RankResult = "Brigadier";
+	}
+	return RankResult;
 
 }
 

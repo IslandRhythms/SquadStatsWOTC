@@ -34,7 +34,7 @@ simulated function SquadScreen_ListItem InitListItem(SquadDetails Entry)
 
 	UpdateData(); // this is really 'set initial data' as the listitem gets destroyed and recreateds
 
-	SetHudHeadIcon();
+	SetHudHeadIcon(); // pass data.averagerank here
 
 	return self;
 }

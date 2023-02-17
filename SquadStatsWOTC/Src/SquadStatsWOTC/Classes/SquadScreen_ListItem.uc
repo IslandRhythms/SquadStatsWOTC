@@ -117,6 +117,7 @@ simulated function UpdateData()
 
 	//Send information to flash aspects
 	// 			(UnitName, UnitSkill, UnitStatus, UnitStatusValue, UnitLocation, UnitCountryFlagPath, bIsDisabled, UnitType, UnitTypeIcon )
+	// either unit location or unit status value could put squad strength
 	AS_UpdateData(UnitsName, "0", Classification, "", "", FlagImage, false, UnitPersonnelType, "");
 }
 

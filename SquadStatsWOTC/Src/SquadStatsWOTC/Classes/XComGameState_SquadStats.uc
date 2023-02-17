@@ -44,6 +44,8 @@ var array<SquadDetails> SquadData;
 
 var array<ChosenInformation> TheChosen;
 
+var localized string squadLabel;
+
 function UpdateSquadData() {
 	local XComGameState_LWSquadManager SquadMgr;
 	local XComGameState_LWPersistentSquad Squad;
@@ -62,25 +64,50 @@ function UpdateSquadData() {
 	Index = SquadData.Find('SquadID', SquadMgr.LastMissionSquad.ObjectID);
 	if (BattleData.m_strOpName == "Operation Gatecrasher") {
 	// Need to get a default image to use for the squad icon since its only used once.
-	/*
-		EntryData.SquadIcon = ; // Cannot make this client facing
-		EntryData.SquadName = "XCOM"; // make this client facing so they can create the squad later on and keep these details
-		EntryData.RawInception = ;
-		EntryData.SquadInceptionDate;
-		EntryData.MissionNames.AddItem(BattleData.m_strOpName);
-	*/
+		EntryData.SquadIcon = "img:///UILibrary_XPACK_StrategyImages.challenge_Xcom"; // Cannot make this client facing, I think
+		EntryData.SquadName = squadLabel; // make this client facing so they can create the squad later on and keep these details
+		EntryData.RawInception = BattleData.LocalTime;
+		EntryData.SquadInceptionDate = class'X2StrategyGameRulesetDataStructures'.static.GetDateString(BattleData.LocalTime, true);;
+		EntryData.MissionNamesWins.AddItem(BattleData.m_strOpName);
+		EntryData.NumMissions = 1.0;
+		AssignSquadLeader(Squad, EntryData);
+		EntryData.DeceasedMembers = UpdateDeceasedSquadMembers(EntryData.DeceasedMembers, SquadData, Squad, SquadMgr);
+		EntryData.CurrentMembers.Length = 0;
+		EntryData.CurrentMembers = UpdateCurrentMembers(Squad);
+		Units = Squad.GetSoldiers();
+		EntryData.NumSoldiers = Units.Length;
+		EntryData.AverageRank = CalculateAverageRank(Squad);
+		EntryData.bIsActive = true;
+		UpdateClearanceRates(BattleData, EntryData); // xcom has to win but this is for number tracking
+		SquadData.AddItem(EntryData);
 	} else if (Index == INDEX_NONE) { // Not gatecrasher but the first time this squad went out on a mission
 		Exists = SquadData.Find('SquadName', Squad.sSquadName);
-		if (Exists != INDEX_NONE) { // this squad was deleted but the player is reusing the name.
-			// update the object id
+		if (Exists != INDEX_NONE) { // this squad was deleted but the player is reusing the name. Or this is the gatecrasher squad
+			// update the object id and other details
 			SquadData[Exists].SquadID = SquadMgr.LastMissionSquad.ObjectID;
+			SquadData[Exists].SquadName = Squad.sSquadName; // could change the name, need to stay up to date
+			SquadData[Exists].SquadIcon = Squad.SquadImagePath != "" ? Squad.SquadImagePath : Squad.DefaultSquadImagePath; // could change the icon, stay up to date
+			SquadData[Exists].NumMissions += 1.0;
+			AssignSquadLeader(Squad, SquadData[Exists]);
+			SquadData[Exists].DeceasedMembers = UpdateDeceasedSquadMembers(SquadData[Exists].DeceasedMembers, SquadData, Squad, SquadMgr);
+			UpdateRosterHistory(Squad, SquadData[Exists].CurrentMembers, SquadData[Exists].PastMembers);
+			SquadData[Exists].CurrentMembers.Length = 0;
+			SquadData[Exists].CurrentMembers = UpdateCurrentMembers(Squad);
+			Units = Squad.GetSoldiers();
+			SquadData[Exists].NumSoldiers = Units.Length;
+			// Chosen Data stuff
+			if(BattleData.ChosenRef.ObjectID != 0) {
+				ChosenState = XComGameState_AdventChosen(`XCOMHISTORY.GetGameStateForObjectID(BattleData.ChosenRef.ObjectID));
+				UpdateChosenInformation(ChosenState, BattleData, SquadData[Exists]);
+			}
+			UpdateClearanceRates(BattleData, SquadData[Exists]);
 		} else {
 			EntryData.SquadID = SquadMgr.LastMissionSquad.ObjectID;
 			EntryData.RawInception = BattleData.LocalTime;
 			EntryData.SquadInceptionDate = class'X2StrategyGameRulesetDataStructures'.static.GetDateString(BattleData.LocalTime, true); // Set as the first mission they complete
 			EntryData.SquadIcon = Squad.SquadImagePath != "" ? Squad.SquadImagePath : Squad.DefaultSquadImagePath;
 			EntryData.SquadName = Squad.sSquadName != "" ? Squad.sSquadName : "XCOM";
-			EntryData.NumMissions = 1.0;
+			EntryData.NumMissions += 1.0;
 			// handle case where first soldier is dead
 			AssignSquadLeader(Squad, EntryData);
 			EntryData.DeceasedMembers = UpdateDeceasedSquadMembers(EntryData.DeceasedMembers, SquadData, Squad, SquadMgr);

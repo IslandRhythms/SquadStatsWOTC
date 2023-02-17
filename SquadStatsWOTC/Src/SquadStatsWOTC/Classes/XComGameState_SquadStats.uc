@@ -53,9 +53,12 @@ function UpdateSquadData() {
 	local XComGameState_BattleData BattleData;
 	local array<XComGameState_Unit> Units;
 	local XComGameState_Unit Unit;
+	local StateObjectReference UnitRef;
 	local int Index, Exists;
 	local XComGameState_AdventChosen ChosenState;
 	local ChosenInformation MiniBoss;
+	local SoldierDetails Soldier;
+	local bool Passed;
 
 	SquadMgr = XComGameState_LWSquadManager(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_LWSquadManager', true));
 	Squad = XComGameState_LWPersistentSquad(`XCOMHISTORY.GetGameStateForObjectID(SquadMgr.LastMissionSquad.ObjectID));
@@ -70,13 +73,24 @@ function UpdateSquadData() {
 		EntryData.SquadInceptionDate = class'X2StrategyGameRulesetDataStructures'.static.GetDateString(BattleData.LocalTime, true);;
 		EntryData.MissionNamesWins.AddItem(BattleData.m_strOpName);
 		EntryData.NumMissions = 1.0;
-		AssignSquadLeader(Squad, EntryData);
-		EntryData.DeceasedMembers = UpdateDeceasedSquadMembers(EntryData.DeceasedMembers, SquadData, Squad, SquadMgr);
-		EntryData.CurrentMembers.Length = 0;
-		EntryData.CurrentMembers = UpdateCurrentMembers(Squad);
-		Units = Squad.GetSoldiers();
-		EntryData.NumSoldiers = Units.Length;
-		EntryData.AverageRank = CalculateAverageRank(Squad);
+		foreach `XCOMHQ.Squad(UnitRef)
+		{
+			Unit = XComGameState_Unit(`XCOMHISTORY.GetGameStateForObjectID(UnitRef.ObjectID));
+			if(Unit.IsAlive()) {
+				Soldier.SoldierID = UnitRef.ObjectID;
+				Soldier.FullName = Unit.GetFullName();
+				if(!Passed) {
+					EntryData.CurrentSquadLeader = Unit.GetFullName();
+					Passed = true;
+				}
+				EntryData.CurrentMembers.AddItem(Soldier);
+			} else {
+				Soldier.FullName = Unit.GetFullName();
+				EntryData.DeceasedMembers.AddItem(Soldier.FullName);
+			}
+		}
+		EntryData.NumSoldiers = EntryData.CurrentMembers.Length;
+		EntryData.AverageRank = "img:///UILibrary_Common.rank_squaddie"; // Could just add an optional param that accepts Entry Data and if EntryData is passed execute that block.
 		EntryData.bIsActive = true;
 		UpdateClearanceRates(BattleData, EntryData); // xcom has to win but this is for number tracking
 		SquadData.AddItem(EntryData);
@@ -85,6 +99,9 @@ function UpdateSquadData() {
 		if (Exists != INDEX_NONE) { // this squad was deleted but the player is reusing the name. Or this is the gatecrasher squad
 			// update the object id and other details
 			SquadData[Exists].SquadID = SquadMgr.LastMissionSquad.ObjectID;
+			if (Squad.sSquadName != SquadData[Exists].SquadName) {
+				SquadData[Exists].PastSquadNames.AddItem(SquadData[Exists].SquadName);
+			}
 			SquadData[Exists].SquadName = Squad.sSquadName; // could change the name, need to stay up to date
 			SquadData[Exists].SquadIcon = Squad.SquadImagePath != "" ? Squad.SquadImagePath : Squad.DefaultSquadImagePath; // could change the icon, stay up to date
 			SquadData[Exists].NumMissions += 1.0;

@@ -70,7 +70,7 @@ simulated function SetHudHeadIcon(optional string NewPath)
 
 	// HudHeadIcon.SetBGColor(GetIconColour(Unit));	
 
-	HudHeadIcon.LoadIconBG(UnitTypeImage $ "_bg");
+	// HudHeadIcon.LoadIconBG(UnitTypeImage $ "_bg");
 	HudHeadIcon.LoadIcon(UnitTypeImage);
 }
 

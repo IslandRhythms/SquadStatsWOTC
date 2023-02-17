@@ -41,11 +41,11 @@ simulated function OpenSquadDetails(SquadScreen_ListItem Data) {
 	for (i = 0; i < Detail.CurrentMembers.Length;i++) {
 		StrDetails = StrDetails $ "\n"@Detail.CurrentMembers[i].FullName;
 	}
-	StrDetails = StrDetails $ "\nFormer Members:";
+	if (Detail.PastMembers.Length > 0) StrDetails = StrDetails $ "\nFormer Members:";
 	for (i = 0; i < Detail.PastMembers.Length; i++) {
 		StrDetails = StrDetails $ "\n"@Detail.PastMembers[i].FullName;
 	}
-	StrDetails = StrDetails $ "\nDeceased Members:";
+	if (Detail.DeceasedMembers.Length > 0) StrDetails = StrDetails $ "\nDeceased Members:";
 	for (i = 0; i < Detail.DeceasedMembers.Length; i++) {
 		StrDetails = StrDetails $ "\n"@Detail.DeceasedMembers[i];
 	}
@@ -59,16 +59,18 @@ simulated function OpenSquadDetails(SquadScreen_ListItem Data) {
 	if (Detail.WinRateAgainstAssassin != "") {
 		StrDetails = StrDetails $ "\nSuccess Rate Against Assassin:"@Detail.WinRateAgainstAssassin;
 	}
-	StrDetails = StrDetails $ "\nPast Names of the Squad";
+	if (Detail.PastSquadNames.Length > 0) {
+		StrDetails = StrDetails $ "\nPast Names of the Squad";
+	}
 	for (i = 0; i < Detail.PastSquadNames.Length; i++) {
 		StrDetails = StrDetails $ "\n"@Detail.PastSquadNames[i];
 	}
 	StrDetails = StrDetails $ "\nNumber of Missions Deployed:"@Detail.NumMissions;
-	StrDetails = StrDetails $ "\nSuccessful Operations";
+	if (Detail.MissionNamesWins.Length > 0) StrDetails = StrDetails $ "\nSuccessful Operations";
 	for (i = 0; i < Detail.MissionNamesWins.Length; i++) {
 		StrDetails = StrDetails $ "\n"@Detail.MissionNamesWins[i];
 	}
-	StrDetails = StrDetails $ "\nFailed Operations";
+	if (Detail.MissionNamesLosses.Length > 0) StrDetails = StrDetails $ "\nFailed Operations";
 	for (i = 0; i < Detail.MissionNamesLosses.Length; i++) {
 		StrDetails = StrDetails $ "\n"@Detail.MissionNamesLosses[i];
 	}

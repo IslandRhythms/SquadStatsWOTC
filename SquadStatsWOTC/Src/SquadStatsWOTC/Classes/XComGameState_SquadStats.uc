@@ -147,7 +147,13 @@ function UpdateSquadData() {
 			SquadData.AddItem(EntryData); // should only do this on cases where the entry wasn't in the db
 		}
 	} else { // The squad returning from the mission exists in the db
-		SquadData[Index].SquadName = Squad.sSquadName; // could change the name, need to stay up to date
+		Exists = SquadData[Index].PastSquadNames.Find(Squad.sSquadName);
+		if (Exists == INDEX_NONE) { // This name has not been used in the past by this squad
+			if (SquadData[Index].SquadName != Squad.sSquadName) { // The name has been changed
+				SquadData[Index].PastSquadNames.AddItem(SquadData[Index].SquadName);
+				SquadData[Index].SquadName = Squad.sSquadName;
+			}
+		}
 		SquadData[Index].SquadIcon = Squad.SquadImagePath != "" ? Squad.SquadImagePath : Squad.DefaultSquadImagePath; // could change the icon, stay up to date
 		SquadData[Index].NumMissions += 1.0;
 		SquadData[Index].CurrentSquadLeader = AssignSquadLeader(Squad, SquadData[Index]);

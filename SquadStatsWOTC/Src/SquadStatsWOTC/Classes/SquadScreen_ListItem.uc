@@ -49,7 +49,7 @@ simulated function CreateHudHeadIcon()
 	HudHeadIcon.SetX(HudHeadIcon.X + 108);
 	HudHeadIcon.SetY(HudHeadIcon.Y + 12);
 
-	HudHeadIcon.SetForegroundColor(class'UIUtilities_Colors'.const.BLACK_HTML_COLOR);
+	// HudHeadIcon.SetForegroundColor(class'UIUtilities_Colors'.const.BLACK_HTML_COLOR);
 
 }
 

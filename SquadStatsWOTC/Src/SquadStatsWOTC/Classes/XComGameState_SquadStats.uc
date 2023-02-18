@@ -61,6 +61,7 @@ function UpdateSquadData() {
 	local ChosenInformation MiniBoss;
 	local SoldierDetails Soldier;
 	local bool Passed;
+	local string ChosenName;
 
 	SquadMgr = XComGameState_LWSquadManager(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_LWSquadManager', true));
 	Squad = XComGameState_LWPersistentSquad(`XCOMHISTORY.GetGameStateForObjectID(SquadMgr.LastMissionSquad.ObjectID));
@@ -69,7 +70,7 @@ function UpdateSquadData() {
 	// Actually for this to function without issue we can't allow re-linking. So if a user deletes a squad. thats it. Squad is perma decommisioned.
 	Index = SquadData.Find('SquadID', SquadMgr.LastMissionSquad.ObjectID);
 	if (BattleData.m_strOpName == "Operation Gatecrasher") { // Special Case for Gatecrasher. Can't use Squad or SquadMgr
-		SetGateCrasherData(EntryData, BattleData);
+		EntryData = SetGateCrasherData(EntryData, BattleData);
 		SquadData.AddItem(EntryData);
 	}
 	else if (Index == INDEX_NONE) { // The first time in our records that this squad went out on a mission
@@ -78,9 +79,9 @@ function UpdateSquadData() {
 			Exists = SquadData.Find('SquadName', Squad.sSquadname);
 			SquadData[Exists].SquadIcon = Squad.SquadImagePath != "" ? Squad.SquadImagePath : Squad.DefaultSquadImagePath; // could change the icon, stay up to date
 			SquadData[Exists].NumMissions += 1.0;
-			AssignSquadLeader(Squad, SquadData[Exists]);
+			SquadData[Exists].CurrentSquadLeader = AssignSquadLeader(Squad, SquadData[Exists]);
 			SquadData[Exists].DeceasedMembers = UpdateDeceasedSquadMembers(SquadData[Index].DeceasedMembers, SquadData, Squad, SquadMgr);
-			UpdateRosterHistory(Squad, SquadData[Exists].CurrentMembers, SquadData[Exists].PastMembers);
+			SquadData[Exists].PastMembers = UpdateRosterHistory(Squad, SquadData[Exists].CurrentMembers, SquadData[Exists].PastMembers);
 			SquadData[Exists].CurrentMembers.Length = 0;
 			SquadData[Exists].CurrentMembers = UpdateCurrentMembers(Squad);
 			Units = Squad.GetSoldiers();
@@ -88,9 +89,9 @@ function UpdateSquadData() {
 			// Chosen Data stuff
 			if(BattleData.ChosenRef.ObjectID != 0) {
 				ChosenState = XComGameState_AdventChosen(`XCOMHISTORY.GetGameStateForObjectID(BattleData.ChosenRef.ObjectID));
-				UpdateChosenInformation(ChosenState, BattleData, SquadData[Exists]);
+				UpdateChosenInformation(ChosenState, BattleData, Exists);
 			}
-			UpdateClearanceRates(BattleData, SquadData[Exists]);
+			UpdateClearanceRates(BattleData, Exists);
 		} else { // not the gatecrasher team.
 			EntryData.SquadID = SquadMgr.LastMissionSquad.ObjectID;
 			EntryData.RawInception = BattleData.LocalTime;
@@ -111,18 +112,47 @@ function UpdateSquadData() {
 			// Chosen Data stuff
 			if(BattleData.ChosenRef.ObjectID != 0) {
 				ChosenState = XComGameState_AdventChosen(`XCOMHISTORY.GetGameStateForObjectID(BattleData.ChosenRef.ObjectID));
-				UpdateChosenInformation(ChosenState, BattleData, EntryData);
+				ChosenName = ChosenState.FirstName $ " " $ ChosenState.NickName $ " " $ ChosenState.LastName;
+				MiniBoss.ChosenType = GetChosenType(ChosenState);
+				MiniBoss.ChosenName = ChosenName;
+				MiniBoss.NumEncounters = 1.0;
+				if (BattleData.bChosenLost) {
+					MiniBoss.NumDefeats += 1.0;
+					if (MiniBoss.ChosenType == "Warlock") {
+						EntryData.WinRateAgainstWarlock = "100%";
+					} else if (MiniBoss.ChosenType == "Hunter") {
+						EntryData.WinRateAgainstHunter = "100%";
+					} else {
+						EntryData.WinRateAgainstAssassin = "100%";
+					}
+				} else {
+					if (MiniBoss.ChosenType == "Warlock") {
+						EntryData.WinRateAgainstWarlock = "0%";
+					} else if (MiniBoss.ChosenType == "Hunter") {
+						EntryData.WinRateAgainstHunter = "0%";
+					} else {
+						EntryData.WinRateAgainstAssassin = "0%";
+					}
+				}
+				EntryData.ChosenEncounters.AddItem(MiniBoss);
 			}
-			UpdateClearanceRates(BattleData, EntryData);
+			if (BattleData.bLocalPlayerWon && !BattleData.bMissionAborted) {
+				EntryData.Wins += 1.0;
+				EntryData.MissionNamesWins.AddItem(BattleData.m_strOpName);
+				EntryData.MissionClearanceRate = "100%";
+			} else {
+				EntryData.MissionNamesLosses.AddItem(BattleData.m_strOpName);
+				EntryData.MissionClearanceRate = "0%";
+			}
 			SquadData.AddItem(EntryData); // should only do this on cases where the entry wasn't in the db
 		}
 	} else { // The squad returning from the mission exists in the db
 		SquadData[Index].SquadName = Squad.sSquadName; // could change the name, need to stay up to date
 		SquadData[Index].SquadIcon = Squad.SquadImagePath != "" ? Squad.SquadImagePath : Squad.DefaultSquadImagePath; // could change the icon, stay up to date
 		SquadData[Index].NumMissions += 1.0;
-		AssignSquadLeader(Squad, SquadData[Index]);
+		SquadData[Index].CurrentSquadLeader = AssignSquadLeader(Squad, SquadData[Index]);
 		SquadData[Index].DeceasedMembers = UpdateDeceasedSquadMembers(SquadData[Index].DeceasedMembers, SquadData, Squad, SquadMgr);
-		UpdateRosterHistory(Squad, SquadData[Index].CurrentMembers, SquadData[Index].PastMembers);
+		SquadData[Index].PastMembers = UpdateRosterHistory(Squad, SquadData[Index].CurrentMembers, SquadData[Index].PastMembers);
 		SquadData[Index].CurrentMembers.Length = 0;
 		SquadData[Index].CurrentMembers = UpdateCurrentMembers(Squad);
 		Units = Squad.GetSoldiers();
@@ -130,16 +160,67 @@ function UpdateSquadData() {
 		// Chosen Data stuff
 		if(BattleData.ChosenRef.ObjectID != 0) {
 			ChosenState = XComGameState_AdventChosen(`XCOMHISTORY.GetGameStateForObjectID(BattleData.ChosenRef.ObjectID));
-			UpdateChosenInformation(ChosenState, BattleData, SquadData[Index]);
+			UpdateChosenInformation(ChosenState, BattleData, Index);
 		}
-		UpdateClearanceRates(BattleData, SquadData[Index]);
+		UpdateClearanceRates(BattleData, Index);
 	}
 	SetStatus(SquadMgr, SquadData);
 
 }
 
+function UpdateChosenInformation(XComGameState_AdventChosen ChosenState, XComGameState_BattleData BattleData, int Index) {
+	local string ChosenName;
+	local int Exists;
+	local ChosenInformation MiniBoss;
+	ChosenName = ChosenState.FirstName $ " " $ ChosenState.NickName $ " " $ ChosenState.LastName;
+	Exists = SquadData[Index].ChosenEncounters.Find('ChosenName', ChosenName);
+	// The Squad has not encountered this chosen yet
+	if (Exists == INDEX_NONE) {
+		MiniBoss.ChosenType = GetChosenType(ChosenState);
+		MiniBoss.ChosenName = ChosenName;
+		MiniBoss.NumEncounters = 1.0;
+		if (BattleData.bChosenLost) {
+			MiniBoss.NumDefeats += 1.0;
+		}
+		SquadData[Index].ChosenEncounters.AddItem(MiniBoss);
+	} else {
+		// do chosen information processing here
+		SquadData[Index].ChosenEncounters[Exists].NumEncounters += 1.0;
+		if (BattleData.bChosenLost) {
+			SquadData[Index].ChosenEncounters[Exists].NumDefeats += 1.0;
+		}
+	}
+}
+
+function UpdateClearanceRates(XComGameState_BattleData BattleData, int Index) {
+	local XComGameState_AdventChosen ChosenState;
+	local int Chosen;
+	local string ChosenType;
+	if (BattleData.bLocalPlayerWon && !BattleData.bMissionAborted) {
+		SquadData[Index].Wins += 1.0;
+		SquadData[Index].MissionNamesWins.AddItem(BattleData.m_strOpName);
+		SquadData[Index].MissionClearanceRate = (SquadData[Index].Wins / SquadData[Index].NumMissions) * 100 $ "%";
+	} else {
+		SquadData[Index].MissionNamesLosses.AddItem(BattleData.m_strOpName);
+		SquadData[Index].MissionClearanceRate = (SquadData[Index].Wins / SquadData[Index].NumMissions) * 100 $ "%";
+	}
+	if (BattleData.ChosenRef.ObjectID != 0) { // I should be able to put all the stuff that relies on this check in one function, but I don't want to take that time.
+		ChosenState = XComGameState_AdventChosen(`XCOMHISTORY.GetGameStateForObjectID(BattleData.ChosenRef.ObjectID));
+		ChosenType = GetChosenType(ChosenState);
+		Chosen = SquadData[Index].ChosenEncounters.Find('ChosenType', ChosenType);
+		if (ChosenType == "Warlock") {
+			SquadData[Index].WinRateAgainstWarlock = (SquadData[Index].ChosenEncounters[Chosen].NumDefeats / SquadData[Index].ChosenEncounters[Chosen].NumEncounters) * 100 $ "%";
+		} else if (ChosenType == "Hunter") {
+			SquadData[Index].WinRateAgainstHunter = (SquadData[Index].ChosenEncounters[Chosen].NumDefeats / SquadData[Index].ChosenEncounters[Chosen].NumEncounters) * 100 $ "%";
+		} else {
+			SquadData[Index].WinRateAgainstAssassin = (SquadData[Index].ChosenEncounters[Chosen].NumDefeats / SquadData[Index].ChosenEncounters[Chosen].NumEncounters) * 100 $ "%";
+		}
+		
+	}
+}
+
 // have this return the object
-function SetGateCrasherData(SquadDetails TeamData, XComGameState_BattleData BattleData) {
+function SquadDetails SetGateCrasherData(SquadDetails TeamData, XComGameState_BattleData BattleData) {
 	local StateObjectReference UnitRef;
 	local XComGameState_Unit Unit;
 	local SoldierDetails SoldierData;
@@ -170,6 +251,7 @@ function SetGateCrasherData(SquadDetails TeamData, XComGameState_BattleData Batt
 	TeamData.MissionClearanceRate = "100%";
 	TeamData.AverageRank = "img:///UILibrary_Common.rank_squaddie";
 	TeamData.bIsActive = false; // becomes true when they create a squad with the same name
+	return TeamData;
 	// forgo setting SquadID since we'll link it later.
 }
 
@@ -206,73 +288,25 @@ function SetStatus(XComGameState_LWSquadManager TeamMgr, array<SquadDetails> Tea
 	}
 }
 
-function AssignSquadLeader(XComGameState_LWPersistentSquad Team, SquadDetails TeamData) {
+function string AssignSquadLeader(XComGameState_LWPersistentSquad Team, SquadDetails TeamData) {
 	local array<XComGameState_Unit> Units;
 	local XComGameState_Unit Unit;
 	local int Index;
+	local string Leader;
 
 
 	Units = Team.GetSoldiers();
 	for (Index = 0; Index < Units.Length; Index++) {
 		Unit = Team.GetSoldier(Index);
 		if (Unit.IsAlive()) {
-			TeamData.CurrentSquadLeader = Unit.GetFullName();
-			break;
+			Leader = Unit.GetFullName();
+			return Leader;
 		}
 	}
-	TeamData.CurrentSquadLeader = "No Squad Leader Currently Assigned";
+	Leader = "No Squad Leader Currently Assigned";
+	return Leader;
 }
 
-function UpdateChosenInformation(XComGameState_AdventChosen ChosenState, XComGameState_BattleData BattleData, SquadDetails TeamData) {
-	local string ChosenName;
-	local int Exists;
-	local ChosenInformation MiniBoss;
-	ChosenName = ChosenState.FirstName $ " " $ ChosenState.NickName $ " " $ ChosenState.LastName;
-	Exists = TeamData.ChosenEncounters.Find('ChosenName', ChosenName);
-	// The Squad has not encountered this chosen yet
-	if (Exists == INDEX_NONE) {
-		MiniBoss.ChosenType = GetChosenType(ChosenState);
-		MiniBoss.ChosenName = ChosenName;
-		MiniBoss.NumEncounters = 1.0;
-		if (BattleData.bChosenLost) {
-			MiniBoss.NumDefeats += 1.0;
-		}
-		TeamData.ChosenEncounters.AddItem(MiniBoss);
-	} else {
-		// do chosen information processing here
-		TeamData.ChosenEncounters[Exists].NumEncounters += 1.0;
-		if (BattleData.bChosenLost) {
-			TeamData.ChosenEncounters[Exists].NumDefeats += 1.0;
-		}
-	}
-}
-
-function UpdateClearanceRates(XComGameState_BattleData BattleData, SquadDetails TeamData) {
-	local XComGameState_AdventChosen ChosenState;
-	local int Chosen;
-	local string ChosenType;
-	if (BattleData.bLocalPlayerWon && !BattleData.bMissionAborted) {
-		TeamData.Wins += 1.0;
-		TeamData.MissionNamesWins.AddItem(BattleData.m_strOpName);
-		TeamData.MissionClearanceRate = (TeamData.Wins / TeamData.NumMissions) * 100 $ "%";
-	} else {
-		TeamData.MissionNamesLosses.AddItem(BattleData.m_strOpName);
-		TeamData.MissionClearanceRate = (TeamData.Wins / TeamData.NumMissions) * 100 $ "%";
-	}
-	if (BattleData.ChosenRef.ObjectID != 0) { // I should be able to put all the stuff that relies on this check in one function, but I don't want to take that time.
-		ChosenState = XComGameState_AdventChosen(`XCOMHISTORY.GetGameStateForObjectID(BattleData.ChosenRef.ObjectID));
-		ChosenType = GetChosenType(ChosenState);
-		Chosen = TeamData.ChosenEncounters.Find('ChosenType', ChosenType);
-		if (ChosenType == "Warlock") {
-			TeamData.WinRateAgainstWarlock = (TeamData.ChosenEncounters[Chosen].NumDefeats / TeamData.ChosenEncounters[Chosen].NumEncounters) * 100 $ "%";
-		} else if (ChosenType == "Hunter") {
-			TeamData.WinRateAgainstHunter = (TeamData.ChosenEncounters[Chosen].NumDefeats / TeamData.ChosenEncounters[Chosen].NumEncounters) * 100 $ "%";
-		} else {
-			TeamData.WinRateAgainstAssassin = (TeamData.ChosenEncounters[Chosen].NumDefeats / TeamData.ChosenEncounters[Chosen].NumEncounters) * 100 $ "%";
-		}
-		
-	}
-}
 
 function string GetChosenType(XComGameState_AdventChosen ChosenState) {
 	local string ChosenType;
@@ -329,7 +363,7 @@ function array<String> UpdateDeceasedSquadMembers(array<String> Dead, array<Squa
  * This function checks the current members assigned to the squad, and see if it matches what's in the data
  * If not, it updates the array accordingly and returns an array of past members.
 */
-function UpdateRosterHistory(XComGameState_LWPersistentSquad Team, array<SoldierDetails> CurrentMembers, array<SoldierDetails> PastMembers) {
+function array<SoldierDetails> UpdateRosterHistory(XComGameState_LWPersistentSquad Team, array<SoldierDetails> CurrentMembers, array<SoldierDetails> PastMembers) {
 	local XComGameState_Unit Unit;
 	local array<StateObjectReference> Units;
 	local StateObjectReference UnitRef;
@@ -351,6 +385,7 @@ function UpdateRosterHistory(XComGameState_LWPersistentSquad Team, array<Soldier
 			}
 		}
 	}
+	return PastMembers;
 
 }
 

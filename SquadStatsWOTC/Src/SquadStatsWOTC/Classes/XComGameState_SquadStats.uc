@@ -80,12 +80,13 @@ function UpdateSquadData() {
 			SquadData[Exists].SquadIcon = Squad.SquadImagePath != "" ? Squad.SquadImagePath : Squad.DefaultSquadImagePath; // could change the icon, stay up to date
 			SquadData[Exists].NumMissions += 1.0;
 			SquadData[Exists].CurrentSquadLeader = AssignSquadLeader(Squad, SquadData[Exists]);
-			SquadData[Exists].DeceasedMembers = UpdateDeceasedSquadMembers(SquadData[Index].DeceasedMembers, SquadData, Squad, SquadMgr);
+			SquadData[Exists].DeceasedMembers = UpdateDeceasedSquadMembers(SquadData[Exists].DeceasedMembers, SquadData, Squad, SquadMgr);
 			SquadData[Exists].PastMembers = UpdateRosterHistory(Squad, SquadData[Exists].CurrentMembers, SquadData[Exists].PastMembers);
 			SquadData[Exists].CurrentMembers.Length = 0;
 			SquadData[Exists].CurrentMembers = UpdateCurrentMembers(Squad);
 			Units = Squad.GetSoldiers();
 			SquadData[Exists].NumSoldiers = Units.Length;
+			SquadData[Exists].bIsActive = true;
 			// Chosen Data stuff
 			if(BattleData.ChosenRef.ObjectID != 0) {
 				ChosenState = XComGameState_AdventChosen(`XCOMHISTORY.GetGameStateForObjectID(BattleData.ChosenRef.ObjectID));

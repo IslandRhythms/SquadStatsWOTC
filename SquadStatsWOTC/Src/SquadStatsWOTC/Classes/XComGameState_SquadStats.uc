@@ -1,38 +1,6 @@
 // This is an Unreal Script
 class XComGameState_SquadStats extends XComGameState_BaseObject;
 
-
-/*
-// Need to get a default image to use for the squad icon since its only used once.
-		EntryData.SquadIcon = "img:///UILibrary_XPACK_StrategyImages.challenge_Xcom"; // Cannot make this client facing, I think
-		EntryData.SquadName = squadLabel; // make this client facing so they can create the squad later on and keep these details
-		EntryData.RawInception = BattleData.LocalTime;
-		EntryData.SquadInceptionDate = class'X2StrategyGameRulesetDataStructures'.static.GetDateString(BattleData.LocalTime, true);;
-		EntryData.MissionNamesWins.AddItem(BattleData.m_strOpName);
-		EntryData.NumMissions = 1.0;
-		foreach `XCOMHQ.Squad(UnitRef)
-		{
-			Unit = XComGameState_Unit(`XCOMHISTORY.GetGameStateForObjectID(UnitRef.ObjectID));
-			if(Unit.IsAlive()) {
-				Soldier.SoldierID = UnitRef.ObjectID;
-				Soldier.FullName = Unit.GetFullName();
-				if(!Passed) {
-					EntryData.CurrentSquadLeader = Unit.GetFullName();
-					Passed = true;
-				}
-				EntryData.CurrentMembers.AddItem(Soldier);
-			} else {
-				Soldier.FullName = Unit.GetFullName();
-				EntryData.DeceasedMembers.AddItem(Soldier.FullName);
-			}
-		}
-		EntryData.NumSoldiers = EntryData.CurrentMembers.Length;
-		EntryData.AverageRank = "img:///UILibrary_Common.rank_squaddie"; // Could just add an optional param that accepts Entry Data and if EntryData is passed execute that block.
-		EntryData.bIsActive = true;
-		UpdateClearanceRates(BattleData, EntryData); // xcom has to win but this is for number tracking
-		SquadData.AddItem(EntryData);
-*/
-
 struct SoldierDetails {
 	var string FullName;
 	var int SoldierID;
@@ -78,6 +46,8 @@ var array<ChosenInformation> TheChosen;
 
 var localized string squadLabel;
 
+var bool XCOMSquadLinked;
+
 function UpdateSquadData() {
 	local XComGameState_LWSquadManager SquadMgr;
 	local XComGameState_LWPersistentSquad Squad;
@@ -98,23 +68,18 @@ function UpdateSquadData() {
 	// Check if the Squad already exists in our Data.
 	// Actually for this to function without issue we can't allow re-linking. So if a user deletes a squad. thats it. Squad is perma decommisioned.
 	Index = SquadData.Find('SquadID', SquadMgr.LastMissionSquad.ObjectID);
-	if (Index == INDEX_NONE) { // The first time in our records that this squad went out on a mission
-		Exists = SquadData.Find('SquadName', Squad.sSquadName); // could have deleted squad and therefore ObjectID, so use name for now.
-		// search for the squad that's missing.
-		if (BattleData.m_strOpName == "Operation Gatecrasher") {
-			Squad.SetName(squadLabel); // to make it consistent with our db
-		} 
-		if (Exists != INDEX_NONE) { // this squad was deleted but the player is reusing the name.
-			// update the object id and other details
-			SquadData[Exists].SquadID = SquadMgr.LastMissionSquad.ObjectID;
-			if (Squad.sSquadName != SquadData[Exists].SquadName) {
-				SquadData[Exists].PastSquadNames.AddItem(SquadData[Exists].SquadName);
-			}
-			SquadData[Exists].SquadName = Squad.sSquadName; // could change the name, need to stay up to date
+	if (BattleData.m_strOpName == "Operation Gatecrasher") { // Special Case for Gatecrasher. Can't use Squad or SquadMgr
+		SetGateCrasherData(EntryData, BattleData);
+		SquadData.AddItem(EntryData);
+	}
+	else if (Index == INDEX_NONE) { // The first time in our records that this squad went out on a mission
+		if (Squad.sSquadName == squadLabel && !XCOMSquadLinked) { // Gatecrasher squad has been reactivated
+			XCOMSquadLinked = true;
+			Exists = SquadData.Find('SquadName', Squad.sSquadname);
 			SquadData[Exists].SquadIcon = Squad.SquadImagePath != "" ? Squad.SquadImagePath : Squad.DefaultSquadImagePath; // could change the icon, stay up to date
 			SquadData[Exists].NumMissions += 1.0;
 			AssignSquadLeader(Squad, SquadData[Exists]);
-			SquadData[Exists].DeceasedMembers = UpdateDeceasedSquadMembers(SquadData[Exists].DeceasedMembers, SquadData, Squad, SquadMgr);
+			SquadData[Exists].DeceasedMembers = UpdateDeceasedSquadMembers(SquadData[Index].DeceasedMembers, SquadData, Squad, SquadMgr);
 			UpdateRosterHistory(Squad, SquadData[Exists].CurrentMembers, SquadData[Exists].PastMembers);
 			SquadData[Exists].CurrentMembers.Length = 0;
 			SquadData[Exists].CurrentMembers = UpdateCurrentMembers(Squad);
@@ -126,12 +91,12 @@ function UpdateSquadData() {
 				UpdateChosenInformation(ChosenState, BattleData, SquadData[Exists]);
 			}
 			UpdateClearanceRates(BattleData, SquadData[Exists]);
-		} else {
+		} else { // not the gatecrasher team.
 			EntryData.SquadID = SquadMgr.LastMissionSquad.ObjectID;
 			EntryData.RawInception = BattleData.LocalTime;
 			EntryData.SquadInceptionDate = class'X2StrategyGameRulesetDataStructures'.static.GetDateString(BattleData.LocalTime, true); // Set as the first mission they complete
 			EntryData.SquadIcon = Squad.SquadImagePath != "" ? Squad.SquadImagePath : Squad.DefaultSquadImagePath;
-			EntryData.SquadName = Squad.sSquadName != "" ? Squad.sSquadName : "XCOM";
+			EntryData.SquadName = Squad.sSquadName;
 			EntryData.NumMissions += 1.0;
 			// handle case where first soldier is dead
 			AssignSquadLeader(Squad, EntryData);
@@ -169,8 +134,43 @@ function UpdateSquadData() {
 		}
 		UpdateClearanceRates(BattleData, SquadData[Index]);
 	}
-	
+	SetStatus(SquadMgr, SquadData);
 
+}
+
+// have this return the object
+function SetGateCrasherData(SquadDetails TeamData, XComGameState_BattleData BattleData) {
+	local StateObjectReference UnitRef;
+	local XComGameState_Unit Unit;
+	local SoldierDetails SoldierData;
+	local bool SquadLeaderSet;
+
+	foreach `XCOMHQ.Squad(UnitRef) {
+		Unit = XComGameState_Unit(`XCOMHISTORY.GetGameStateForObjectID(UnitRef.ObjectID));
+		SoldierData.FullName = Unit.GetFullName();
+		if (Unit.IsAlive()) {
+			if (!SquadLeaderSet) {
+				TeamData.CurrentSquadLeader = SoldierData.FullName;
+				SquadLeaderSet = true;
+			}
+			SoldierData.SoldierID = UnitRef.ObjectID;
+			TeamData.CurrentMembers.AddItem(SoldierData);
+		} else {
+			TeamData.DeceasedMembers.AddItem(SoldierData.FullName);
+		}
+	}
+	TeamData.NumMissions = 1.0;
+	TeamData.MissionNamesWins.AddItem(BattleData.m_strOpName);
+	TeamData.NumSoldiers = TeamData.CurrentMembers.Length;
+	TeamData.SquadName = squadLabel;
+	TeamData.RawInception = BattleData.LocalTime;
+	TeamData.SquadInceptionDate = class'X2StrategyGameRulesetDataStructures'.static.GetDateString(BattleData.LocalTime, true);
+	TeamData.SquadIcon = "img:///UILibrary_XPACK_StrategyImages.challenge_Xcom";
+	TeamData.Wins = 1.0;
+	TeamData.MissionClearanceRate = "100%";
+	TeamData.AverageRank = "img:///UILibrary_Common.rank_squaddie";
+	TeamData.bIsActive = false; // becomes true when they create a squad with the same name
+	// forgo setting SquadID since we'll link it later.
 }
 
 /*
@@ -197,11 +197,11 @@ function UpdateSquadData() {
 
 function SetStatus(XComGameState_LWSquadManager TeamMgr, array<SquadDetails> TeamData) {
 	local int Index, Exists;
-	for(Index = 0; Index < SquadData.Length; Index++) {
-		Exists = SquadMgr.Squads.Find('ObjectID', SquadData[Index].SquadID);
+	for(Index = 0; Index < TeamData.Length; Index++) {
+		Exists = TeamMgr.Squads.Find('ObjectID', TeamData[Index].SquadID);
 		// the squad does not exist in the squad manager anymore. They are out of commission.
 		if (Exists == INDEX_NONE) {
-			SquadData[Index].bIsActive = false;
+			TeamData[Index].bIsActive = false;
 		}
 	}
 }
@@ -367,7 +367,7 @@ function array<SoldierDetails> UpdateCurrentMembers(XComGameState_LWPersistentSq
 
 	for (Index = 0; Index < Units.Length; Index++) {
 	// I feel like there is a bug on this line.
-		`log(Units[Index].ObjectID);
+		`log("What is this value"@Units[Index].ObjectID);
 		Data.SoldierID = Units[Index].ObjectID;
 		FullName = Units[Index].GetFullName();
 		Data.FullName = FullName;

@@ -37,10 +37,11 @@ simulated function OpenSquadDetails(SquadScreen_ListItem Data) {
 	StrDetails = "Squad Launched on"@Detail.SquadInceptionDate;
 	StrDetails = StrDetails $ "\nCurrent Squad Leader: "@Detail.CurrentSquadLeader;
 	StrDetails = StrDetails $ "\nTotal Troops in Squad:"@Detail.NumSoldiers;
-	StrDetails = StrDetails $ "\nCurrent Members:";
+	// commenting out fields that don't really add anything/overflow the allotted space
+	/*StrDetails = StrDetails $ "\nCurrent Members:";
 	for (i = 0; i < Detail.CurrentMembers.Length;i++) {
 		StrDetails = StrDetails $ "\n"@Detail.CurrentMembers[i].FullName;
-	}
+	}*/
 	if (Detail.PastMembers.Length > 0) StrDetails = StrDetails $ "\nFormer Members:";
 	for (i = 0; i < Detail.PastMembers.Length; i++) {
 		StrDetails = StrDetails $ "\n"@Detail.PastMembers[i].FullName;
@@ -60,20 +61,22 @@ simulated function OpenSquadDetails(SquadScreen_ListItem Data) {
 		StrDetails = StrDetails $ "\nSuccess Rate Against Assassin:"@Detail.WinRateAgainstAssassin;
 	}
 	if (Detail.PastSquadNames.Length > 0) {
-		StrDetails = StrDetails $ "\nPast Names of the Squad";
+		StrDetails = StrDetails $ "\nPast Names of the Squad:";
 	}
 	for (i = 0; i < Detail.PastSquadNames.Length; i++) {
 		StrDetails = StrDetails $ "\n"@Detail.PastSquadNames[i];
 	}
 	StrDetails = StrDetails $ "\nNumber of Missions Deployed:"@Detail.NumMissions;
-	if (Detail.MissionNamesWins.Length > 0) StrDetails = StrDetails $ "\nSuccessful Operations";
+	if (Detail.MissionNamesWins.Length > 0) StrDetails = StrDetails $ "\nSuccessful Operations"@Detail.MissionNamesWins.Length;
+	/*
 	for (i = 0; i < Detail.MissionNamesWins.Length; i++) {
 		StrDetails = StrDetails $ "\n"@Detail.MissionNamesWins[i];
-	}
-	if (Detail.MissionNamesLosses.Length > 0) StrDetails = StrDetails $ "\nFailed Operations";
+	}*/
+	if (Detail.MissionNamesLosses.Length > 0) StrDetails = StrDetails $ "\nFailed Operations"@Detail.MissionNamesLosses.Length;
+	/*
 	for (i = 0; i < Detail.MissionNamesLosses.Length; i++) {
 		StrDetails = StrDetails $ "\n"@Detail.MissionNamesLosses[i];
-	}
+	}*/
 
 	DialogData.strText = StrDetails;
 	DialogData.strImagePath = class'UIUtilities_Image'.static.ValidateImagePath(Detail.SquadIcon);

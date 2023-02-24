@@ -50,7 +50,7 @@ simulated function OpenSquadDetails(SquadScreen_ListItem Data) {
 	for (i = 0; i < Detail.DeceasedMembers.Length; i++) {
 		StrDetails = StrDetails $ "\n"@Detail.DeceasedMembers[i];
 	}
-	StrDetails = StrDetails $ "\nSuccess Rate"@Detail.MissionClearanceRate;
+	StrDetails = StrDetails $ "\nSuccess Rate:"@Detail.MissionClearanceRate;
 	if (Detail.WinRateAgainstWarlock != "") {
 		StrDetails = StrDetails $ "\nSuccess Rate Against Warlock:"@Detail.WinRateAgainstWarlock;
 	}
@@ -67,12 +67,12 @@ simulated function OpenSquadDetails(SquadScreen_ListItem Data) {
 		StrDetails = StrDetails $ "\n"@Detail.PastSquadNames[i];
 	}
 	StrDetails = StrDetails $ "\nNumber of Missions Deployed:"@Detail.NumMissions;
-	if (Detail.MissionNamesWins.Length > 0) StrDetails = StrDetails $ "\nSuccessful Operations"@Detail.MissionNamesWins.Length;
+	if (Detail.MissionNamesWins.Length > 0) StrDetails = StrDetails $ "\nSuccessful Operations:"@Detail.MissionNamesWins.Length;
 	/*
 	for (i = 0; i < Detail.MissionNamesWins.Length; i++) {
 		StrDetails = StrDetails $ "\n"@Detail.MissionNamesWins[i];
 	}*/
-	if (Detail.MissionNamesLosses.Length > 0) StrDetails = StrDetails $ "\nFailed Operations"@Detail.MissionNamesLosses.Length;
+	if (Detail.MissionNamesLosses.Length > 0) StrDetails = StrDetails $ "\nFailed Operations:"@Detail.MissionNamesLosses.Length;
 	/*
 	for (i = 0; i < Detail.MissionNamesLosses.Length; i++) {
 		StrDetails = StrDetails $ "\n"@Detail.MissionNamesLosses[i];

@@ -80,7 +80,7 @@ function UpdateSquadData() {
 			SquadData[Exists].SquadIcon = Squad.SquadImagePath != "" ? Squad.SquadImagePath : Squad.DefaultSquadImagePath; // could change the icon, stay up to date
 			SquadData[Exists].NumMissions += 1.0;
 			SquadData[Exists].CurrentSquadLeader = AssignSquadLeader(Squad, SquadData[Exists]);
-			SquadData[Exists].DeceasedMembers = UpdateDeceasedSquadMembers(SquadData[Exists].DeceasedMembers, SquadData, Squad, SquadMgr);
+			SquadData[Exists].DeceasedMembers = UpdateDeceasedSquadMembers(SquadData[Exists].DeceasedMembers, Squad);
 			SquadData[Exists].PastMembers = UpdateRosterHistory(Squad, SquadData[Exists].CurrentMembers, SquadData[Exists].PastMembers);
 			SquadData[Exists].CurrentMembers.Length = 0;
 			SquadData[Exists].CurrentMembers = UpdateCurrentMembers(Squad);
@@ -101,8 +101,8 @@ function UpdateSquadData() {
 			EntryData.SquadName = Squad.sSquadName;
 			EntryData.NumMissions += 1.0;
 			// handle case where first soldier is dead
-			AssignSquadLeader(Squad, EntryData);
-			EntryData.DeceasedMembers = UpdateDeceasedSquadMembers(EntryData.DeceasedMembers, SquadData, Squad, SquadMgr);
+			EntryData.CurrentSquadLeader = AssignSquadLeader(Squad, EntryData);
+			EntryData.DeceasedMembers = UpdateDeceasedSquadMembers(EntryData.DeceasedMembers, Squad);
 			EntryData.CurrentMembers.Length = 0;
 			EntryData.CurrentMembers = UpdateCurrentMembers(Squad);
 			Units = Squad.GetSoldiers();
@@ -158,7 +158,7 @@ function UpdateSquadData() {
 		SquadData[Index].SquadIcon = Squad.SquadImagePath != "" ? Squad.SquadImagePath : Squad.DefaultSquadImagePath; // could change the icon, stay up to date
 		SquadData[Index].NumMissions += 1.0;
 		SquadData[Index].CurrentSquadLeader = AssignSquadLeader(Squad, SquadData[Index]);
-		SquadData[Index].DeceasedMembers = UpdateDeceasedSquadMembers(SquadData[Index].DeceasedMembers, SquadData, Squad, SquadMgr);
+		SquadData[Index].DeceasedMembers = UpdateDeceasedSquadMembers(SquadData[Index].DeceasedMembers, Squad);
 		SquadData[Index].PastMembers = UpdateRosterHistory(Squad, SquadData[Index].CurrentMembers, SquadData[Index].PastMembers);
 		SquadData[Index].CurrentMembers.Length = 0;
 		SquadData[Index].CurrentMembers = UpdateCurrentMembers(Squad);
@@ -324,11 +324,11 @@ function string GetChosenType(XComGameState_AdventChosen ChosenState) {
 
 
 // for updating var array<String> DeceasedMembers;
-function array<String> UpdateDeceasedSquadMembers(array<String> Dead, array<SquadDetails> TeamData, XComGameState_LWPersistentSquad Roster, XComGameState_LWSquadManager TeamMgr) {
+// when a soldier dies, they are removed from the squad. Therefore, we must use our internal current members array.
+function array<String> UpdateDeceasedSquadMembers(array<String> Dead, XComGameState_LWPersistentSquad Roster) {
 	local XcomGameState_Unit Unit;
 	local StateObjectReference UnitRef;
-	local XComGameState_LWPersistentSquad Team;
-	local int Index, i, Exists, Found;
+	local int Index, i, Found;
 	local string FullName;
 	local array<String> UpdatedList;
 	for (Index = 0; Index < Dead.Length; Index++) {
@@ -340,21 +340,18 @@ function array<String> UpdateDeceasedSquadMembers(array<String> Dead, array<Squa
 		Unit = XComGameState_Unit(`XCOMHISTORY.GetGameStateForObjectID(UnitRef.ObjectID));
 		if (!Unit.IsAlive()) {
 			FullName = Unit.GetFullName();
-			if (Roster.IsSoldierTemporary(UnitRef)) {
+			// if they don't belong to the current squad, find the squad they belong to.
+			if (!Roster.UnitIsInSquad(UnitRef)) { // this should cover the case where they reassign the soldier to this squad.
 				// find the squad this soldier belongs to and add them to the deceased array
-				for (Index = 0; Index < TeamMgr.Squads.Length; Index++) {
-					Team = TeamMgr.GetSquad(Index);
-					Exists = Team.SquadSoldiers.Find('ObjectID', UnitRef.ObjectID);
-					// This soldier belongs to this squad
-					if (Exists != INDEX_NONE) {
-					// go through our array and find our records for that squad
-						for (i = 0; i < TeamData.Length; i++) {
-							Found = SquadData.Find('SquadID', TeamMgr.Squads[Index].ObjectID);
-							// found the record for the squad
-							if (Found != INDEX_NONE) {
-								TeamData[Found].DeceasedMembers.AddItem(FullName);
-							}
-						}
+				for (Index = 0; Index < SquadData.Length; Index++) {
+					// Iterate through the current members we have on record.
+					`log("what is the objectID"@UnitRef.ObjectID);
+					Found = SquadData[Index].CurrentMembers.Find('SoldierID', UnitRef.ObjectID);
+					// It is possible that this soldier does not belong to any squad. In which case they don't go in any squad pages.
+					`log("If the number isn't negative, they belong to a squad on record"@Found);
+					if (Found != INDEX_NONE) {
+						SquadData[Index].DeceasedMembers.AddItem(FullName);
+						SquadData[Index].NumSoldiers -= 1;
 					}
 				}
 			} else {

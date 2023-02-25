@@ -54,11 +54,20 @@ simulated function OpenSquadDetails(SquadScreen_ListItem Data) {
 	if (Detail.WinRateAgainstWarlock != "") {
 		StrDetails = StrDetails $ "\nSuccess Rate Against Warlock:"@Detail.WinRateAgainstWarlock;
 	}
+	if (Detail.DefeatedWarlock) {
+		StrDetails = StrDetails $ "\nExterminated the Warlock";
+	}
 	if (Detail.WinRateAgainstHunter != "") {
 		StrDetails = StrDetails $ "\nSuccess Rate Against Hunter:"@Detail.WinRateAgainstHunter;
 	}
+	if (Detail.DefeatedHunter) {
+		StrDetails = StrDetails $ "\nExterminated the Hunter";
+	}
 	if (Detail.WinRateAgainstAssassin != "") {
 		StrDetails = StrDetails $ "\nSuccess Rate Against Assassin:"@Detail.WinRateAgainstAssassin;
+	}
+	if (Detail.DefeatedAssassin) {
+		StrDetails = StrDetails $ "\nExterminated the Assassin";
 	}
 	if (Detail.PastSquadNames.Length > 0) {
 		StrDetails = StrDetails $ "\nPast Names of the Squad:";

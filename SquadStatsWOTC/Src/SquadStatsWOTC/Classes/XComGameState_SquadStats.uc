@@ -24,6 +24,9 @@ struct SquadDetails {
 	var string WinRateAgainstWarlock;
 	var string WinRateAgainstHunter;
 	var string WinRateAgainstAssassin;
+	var bool DefeatedAssassin;
+	var bool DefeatedWarlock;
+	var bool DefeatedHunter;
 	var float NumMissions;
 	var float Wins;
 	var string MissionClearanceRate;
@@ -87,10 +90,10 @@ function UpdateSquadData() {
 			Units = Squad.GetSoldiers();
 			SquadData[Exists].NumSoldiers = Units.Length;
 			SquadData[Exists].bIsActive = true;
+			SquadData[Exists].SquadID = SquadMgr.LastMissionSquad.ObjectID;
 			// Chosen Data stuff
 			if(BattleData.ChosenRef.ObjectID != 0) {
-				ChosenState = XComGameState_AdventChosen(`XCOMHISTORY.GetGameStateForObjectID(BattleData.ChosenRef.ObjectID));
-				UpdateChosenInformation(ChosenState, BattleData, Exists);
+				UpdateChosenInformation(BattleData, Exists);
 			}
 			UpdateClearanceRates(BattleData, Exists);
 		} else { // not the gatecrasher team.
@@ -166,8 +169,7 @@ function UpdateSquadData() {
 		SquadData[Index].NumSoldiers = Units.Length;
 		// Chosen Data stuff
 		if(BattleData.ChosenRef.ObjectID != 0) {
-			ChosenState = XComGameState_AdventChosen(`XCOMHISTORY.GetGameStateForObjectID(BattleData.ChosenRef.ObjectID));
-			UpdateChosenInformation(ChosenState, BattleData, Index);
+			UpdateChosenInformation(BattleData, Index);
 		}
 		UpdateClearanceRates(BattleData, Index);
 	}
@@ -175,10 +177,12 @@ function UpdateSquadData() {
 
 }
 
-function UpdateChosenInformation(XComGameState_AdventChosen ChosenState, XComGameState_BattleData BattleData, int Index) {
+function UpdateChosenInformation(XComGameState_BattleData BattleData, int Index) {
 	local string ChosenName;
 	local int Exists;
 	local ChosenInformation MiniBoss;
+	local XComGameState_AdventChosen ChosenState;
+	ChosenState = XComGameState_AdventChosen(`XCOMHISTORY.GetGameStateForObjectID(BattleData.ChosenRef.ObjectID));
 	ChosenName = ChosenState.FirstName $ " " $ ChosenState.NickName $ " " $ ChosenState.LastName;
 	Exists = SquadData[Index].ChosenEncounters.Find('ChosenName', ChosenName);
 	// The Squad has not encountered this chosen yet
@@ -189,12 +193,30 @@ function UpdateChosenInformation(XComGameState_AdventChosen ChosenState, XComGam
 		if (BattleData.bChosenLost) {
 			MiniBoss.NumDefeats += 1.0;
 		}
+		if (BattleData.bChosenDefeated) {
+			if (MiniBoss.ChosenType == "Warlock") {
+				SquadData[Index].DefeatedWarlock = true;
+			} else if (MiniBoss.ChosenType == "Hunter") {
+				SquadData[Index].DefeatedHunter = true;
+			} else {
+				SquadData[Index].DefeatedAssassin = true;
+			}
+		}
 		SquadData[Index].ChosenEncounters.AddItem(MiniBoss);
 	} else {
 		// do chosen information processing here
 		SquadData[Index].ChosenEncounters[Exists].NumEncounters += 1.0;
 		if (BattleData.bChosenLost) {
 			SquadData[Index].ChosenEncounters[Exists].NumDefeats += 1.0;
+		}
+		if (BattleData.bChosenDefeated) {
+			if (SquadData[Index].ChosenEncounters[Exists].ChosenType == "Warlock") {
+				SquadData[Index].DefeatedWarlock = true;
+			} else if (SquadData[Index].ChosenEncounters[Exists].ChosenType == "Hunter") {
+				SquadData[Index].DefeatedHunter = true;
+			} else {
+				SquadData[Index].DefeatedAssassin = true;
+			}
 		}
 	}
 }

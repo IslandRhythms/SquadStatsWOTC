@@ -63,9 +63,18 @@ function UpdateSquadData() {
 	local XComGameState_AdventChosen ChosenState;
 	local ChosenInformation MiniBoss;
 	local SoldierDetails Soldier;
-	local bool Passed;
+	local bool Passed, EveryoneDied;
 	local string ChosenName;
 
+	// Prevent an entry being created for a squad being eliminated on their first outing
+	EveryoneDied = true;
+	foreach `XCOMHQ.Squad(UnitRef) {
+		Unit = XComGameState_Unit(`XCOMHISTORY.GetGameStateForObjectID(UnitRef.ObjectID));
+		if (Unit.IsAlive()) {
+			EveryoneDied = false;
+			break;
+		}
+	}
 	SquadMgr = XComGameState_LWSquadManager(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_LWSquadManager', true));
 	Squad = XComGameState_LWPersistentSquad(`XCOMHISTORY.GetGameStateForObjectID(SquadMgr.LastMissionSquad.ObjectID));
 	BattleData = XComGameState_BattleData(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_BattleData'));
@@ -97,58 +106,64 @@ function UpdateSquadData() {
 			}
 			UpdateClearanceRates(BattleData, Exists);
 		} else { // not the gatecrasher team.
-			EntryData.SquadID = SquadMgr.LastMissionSquad.ObjectID;
-			EntryData.RawInception = BattleData.LocalTime;
-			EntryData.SquadInceptionDate = class'X2StrategyGameRulesetDataStructures'.static.GetDateString(BattleData.LocalTime, true); // Set as the first mission they complete
-			EntryData.SquadIcon = Squad.SquadImagePath != "" ? Squad.SquadImagePath : Squad.DefaultSquadImagePath;
-			EntryData.SquadName = Squad.sSquadName;
-			EntryData.NumMissions += 1.0;
-			// handle case where first soldier is dead
-			EntryData.CurrentSquadLeader = AssignSquadLeader(Squad, EntryData);
-			EntryData.DeceasedMembers = UpdateDeceasedSquadMembers(EntryData.DeceasedMembers, Squad);
-			EntryData.CurrentMembers.Length = 0;
-			EntryData.CurrentMembers = UpdateCurrentMembers(Squad);
-			Units = Squad.GetSoldiers();
-			EntryData.NumSoldiers = Units.Length;
-			EntryData.AverageRank = CalculateAverageRank(Squad);
-			EntryData.bIsActive = true;
-			EntryData.ID = SquadData.Length + 1;
-			// Chosen Data stuff
-			if(BattleData.ChosenRef.ObjectID != 0) {
-				ChosenState = XComGameState_AdventChosen(`XCOMHISTORY.GetGameStateForObjectID(BattleData.ChosenRef.ObjectID));
-				ChosenName = ChosenState.FirstName $ " " $ ChosenState.NickName $ " " $ ChosenState.LastName;
-				MiniBoss.ChosenType = GetChosenType(ChosenState);
-				MiniBoss.ChosenName = ChosenName;
-				MiniBoss.NumEncounters = 1.0;
-				if (BattleData.bChosenLost) {
-					MiniBoss.NumDefeats += 1.0;
-					if (MiniBoss.ChosenType == "Warlock") {
-						EntryData.WinRateAgainstWarlock = "100%";
-					} else if (MiniBoss.ChosenType == "Hunter") {
-						EntryData.WinRateAgainstHunter = "100%";
+
+			// This if statement handles the case where the entire squad dies on the first mission.
+			// If it's their first mission and they all die, don't put them in the books.
+			if (!EveryoneDied) {
+				EntryData.SquadID = SquadMgr.LastMissionSquad.ObjectID;
+				EntryData.RawInception = BattleData.LocalTime;
+				EntryData.SquadInceptionDate = class'X2StrategyGameRulesetDataStructures'.static.GetDateString(BattleData.LocalTime, true); // Set as the first mission they complete
+				EntryData.SquadIcon = Squad.SquadImagePath != "" ? Squad.SquadImagePath : Squad.DefaultSquadImagePath;
+				EntryData.SquadName = Squad.sSquadName;
+				EntryData.NumMissions += 1.0;
+				// handle case where first soldier is dead
+				EntryData.CurrentSquadLeader = AssignSquadLeader(Squad, EntryData);
+				EntryData.DeceasedMembers = UpdateDeceasedSquadMembers(EntryData.DeceasedMembers, Squad);
+				EntryData.CurrentMembers.Length = 0;
+				EntryData.CurrentMembers = UpdateCurrentMembers(Squad);
+				Units = Squad.GetSoldiers();
+				EntryData.NumSoldiers = Units.Length;
+				EntryData.AverageRank = CalculateAverageRank(Squad);
+				EntryData.bIsActive = true;
+				EntryData.ID = SquadData.Length + 1;
+				// Chosen Data stuff
+				if(BattleData.ChosenRef.ObjectID != 0) {
+					ChosenState = XComGameState_AdventChosen(`XCOMHISTORY.GetGameStateForObjectID(BattleData.ChosenRef.ObjectID));
+					ChosenName = ChosenState.FirstName $ " " $ ChosenState.NickName $ " " $ ChosenState.LastName;
+					MiniBoss.ChosenType = GetChosenType(ChosenState);
+					MiniBoss.ChosenName = ChosenName;
+					MiniBoss.NumEncounters = 1.0;
+					if (BattleData.bChosenLost) {
+						MiniBoss.NumDefeats += 1.0;
+						if (MiniBoss.ChosenType == "Warlock") {
+							EntryData.WinRateAgainstWarlock = "100%";
+						} else if (MiniBoss.ChosenType == "Hunter") {
+							EntryData.WinRateAgainstHunter = "100%";
+						} else {
+							EntryData.WinRateAgainstAssassin = "100%";
+						}
 					} else {
-						EntryData.WinRateAgainstAssassin = "100%";
+						if (MiniBoss.ChosenType == "Warlock") {
+							EntryData.WinRateAgainstWarlock = "0%";
+						} else if (MiniBoss.ChosenType == "Hunter") {
+							EntryData.WinRateAgainstHunter = "0%";
+						} else {
+							EntryData.WinRateAgainstAssassin = "0%";
+						}
 					}
-				} else {
-					if (MiniBoss.ChosenType == "Warlock") {
-						EntryData.WinRateAgainstWarlock = "0%";
-					} else if (MiniBoss.ChosenType == "Hunter") {
-						EntryData.WinRateAgainstHunter = "0%";
-					} else {
-						EntryData.WinRateAgainstAssassin = "0%";
-					}
+					EntryData.ChosenEncounters.AddItem(MiniBoss);
 				}
-				EntryData.ChosenEncounters.AddItem(MiniBoss);
-			}
-			if (BattleData.bLocalPlayerWon && !BattleData.bMissionAborted) {
-				EntryData.Wins += 1.0;
-				EntryData.MissionNamesWins.AddItem(BattleData.m_strOpName);
-				EntryData.MissionClearanceRate = "100%";
-			} else {
-				EntryData.MissionNamesLosses.AddItem(BattleData.m_strOpName);
-				EntryData.MissionClearanceRate = "0%";
-			}
-			SquadData.AddItem(EntryData); // should only do this on cases where the entry wasn't in the db
+				// done with the chosen stuff
+				if (BattleData.bLocalPlayerWon && !BattleData.bMissionAborted) {
+					EntryData.Wins += 1.0;
+					EntryData.MissionNamesWins.AddItem(BattleData.m_strOpName);
+					EntryData.MissionClearanceRate = "100%";
+				} else {
+					EntryData.MissionNamesLosses.AddItem(BattleData.m_strOpName);
+					EntryData.MissionClearanceRate = "0%";
+				}
+				SquadData.AddItem(EntryData); // should only do this on cases where the entry wasn't in the db
+			} 
 		}
 	} else { // The squad returning from the mission exists in the db
 		Exists = SquadData[Index].PastSquadNames.Find(Squad.sSquadName);
@@ -406,7 +421,9 @@ function array<SoldierDetails> UpdateRosterHistory(XComGameState_LWPersistentSqu
 			// The soldier is not in the current squad. Therefore, they are now a past member.
 			// Now check if they have been a past member before
 			Former = PastMembers.Find('SoldierID', CurrentMembers[Index].SoldierID);
-			if (Former == INDEX_NONE) {
+			// Using the soldierId, get the Unit and check if they're alive. 
+			Unit = XComGameState_Unit(`XCOMHISTORY.GetGameStateForObjectID(CurrentMembers[Index].SoldierID));
+			if (Former == INDEX_NONE && Unit.IsAlive()) {
 				PastMembers.AddItem(CurrentMembers[Index]);
 			}
 		}

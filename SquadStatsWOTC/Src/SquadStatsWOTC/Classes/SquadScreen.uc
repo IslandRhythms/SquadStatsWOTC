@@ -23,9 +23,18 @@ simulated function OnListItemClicked(UIList ContainerList, int ItemIndex) {
 	}
 }
 
+simulated function DeceasedButtonClicked(UIButton ButtonClicked) {
+	`LOG("THE DECEASED BUTTON WORKS");
+}
+
+simulated function FormerButtonClicked(UIButton ButtonClicked) {
+	`LOG("THE FORMER BUTTON WORKS");
+}
+
 // I have the list item, but how do I get the data?
 simulated function OpenSquadDetails(SquadScreen_ListItem Data) {
 	local TDialogueBoxData DialogData;
+	local UIButton Deceased, Former;
 	local String StrDetails;
 	local SquadDetails Detail;
 	local Texture2D StaffPicture;
@@ -34,6 +43,12 @@ simulated function OpenSquadDetails(SquadScreen_ListItem Data) {
 	DialogData.eType = eDialog_Normal;
 	DialogData.strTitle = Detail.SquadName;
 	DialogData.strAccept = class'UIDialogueBox'.default.m_strDefaultAcceptLabel;
+	Deceased = Spawn(class'UIButton', self);
+	Deceased.InitButton('DeceasedList', "View Deceased Soldiers", DeceasedButtonClicked, eUIButtonStyle_NONE);
+	Deceased.SetPosition(100, 880);
+	Former = Spawn(class 'UIButton', self);
+	Former.InitButton('FormerList', "View Former Squad Mates", FormerButtonClicked, eUIButtonStyle_NONE);
+	Former.SetPosition(100, 770);
 	StrDetails = "Squad Launched on"@Detail.SquadInceptionDate;
 	StrDetails = StrDetails $ "\nCurrent Squad Leader: "@Detail.CurrentSquadLeader;
 	StrDetails = StrDetails $ "\nTotal Troops in Squad:"@Detail.NumSoldiers;

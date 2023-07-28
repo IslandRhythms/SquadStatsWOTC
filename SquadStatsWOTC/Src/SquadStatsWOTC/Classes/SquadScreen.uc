@@ -43,12 +43,6 @@ simulated function OpenSquadDetails(SquadScreen_ListItem Data) {
 	DialogData.eType = eDialog_Normal;
 	DialogData.strTitle = Detail.SquadName;
 	DialogData.strAccept = class'UIDialogueBox'.default.m_strDefaultAcceptLabel;
-	Deceased = Spawn(class'UIButton', self);
-	Deceased.InitButton('DeceasedList', "View Deceased Soldiers", DeceasedButtonClicked, eUIButtonStyle_NONE);
-	Deceased.SetPosition(100, 880);
-	Former = Spawn(class 'UIButton', self);
-	Former.InitButton('FormerList', "View Former Squad Mates", FormerButtonClicked, eUIButtonStyle_NONE);
-	Former.SetPosition(100, 770);
 	StrDetails = "Squad Launched on"@Detail.SquadInceptionDate;
 	StrDetails = StrDetails $ "\nCurrent Squad Leader: "@Detail.CurrentSquadLeader;
 	StrDetails = StrDetails $ "\nTotal Troops in Squad:"@Detail.NumSoldiers;
@@ -105,6 +99,16 @@ simulated function OpenSquadDetails(SquadScreen_ListItem Data) {
 	DialogData.strText = StrDetails;
 	DialogData.strImagePath = class'UIUtilities_Image'.static.ValidateImagePath(Detail.SquadIcon);
 	Movie.Pres.UIRaiseDialog( DialogData );
+	// UIDialogueBox_4
+	// Would probably be _3 if we called it before the dialogue was raised.
+	`LOG(Movie.Pres.ScreenStack.GetCurrentScreen());
+	// theoretically we should be able to find the instance in the stack and add that there.
+	Deceased = Spawn(class'UIButton', Movie.Pres.ScreenStack.GetCurrentScreen());
+	Deceased.InitButton('DeceasedList', "View Deceased Soldiers", DeceasedButtonClicked, eUIButtonStyle_NONE);
+	Deceased.SetPosition(100, 880);
+	Former = Spawn(class 'UIButton', Movie.Pres.ScreenStack.GetCurrentScreen());
+	Former.InitButton('FormerList', "View Former Squad Mates", FormerButtonClicked, eUIButtonStyle_NONE);
+	Former.SetPosition(100, 770);
 }
 
 simulated function CreateSortHeaders()

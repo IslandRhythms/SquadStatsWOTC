@@ -5,6 +5,7 @@ class SquadScreen extends UIPersonnel dependson(XComGameState_SquadStats);
 var UIPersonnel SquadList;
 var UINavigationHelp NavHelp;
 var SquadScreen_ListItem LastHighlighted;
+var String SquadName;
 
 
 simulated function InitSquadScreen()
@@ -24,11 +25,27 @@ simulated function OnListItemClicked(UIList ContainerList, int ItemIndex) {
 }
 
 simulated function DeceasedButtonClicked(UIButton ButtonClicked) {
+	local FilteredScreen FS;
 	`LOG("THE DECEASED BUTTON WORKS");
+	if( `HQPRES.ScreenStack.IsNotInStack(class'FilteredScreen') )
+	{
+		FS = `HQPRES.Spawn(class'FilteredScreen',`HQPRES);
+
+        `HQPRES.ScreenStack.Push(FS);
+		FS.InitFilteredScreen("Deceased", SquadName);
+	}
 }
 
 simulated function FormerButtonClicked(UIButton ButtonClicked) {
+	local FilteredScreen FS;
 	`LOG("THE FORMER BUTTON WORKS");
+	if( `HQPRES.ScreenStack.IsNotInStack(class'FilteredScreen') )
+	{
+		FS = `HQPRES.Spawn(class'FilteredScreen',`HQPRES);
+
+        `HQPRES.ScreenStack.Push(FS);
+		FS.InitFilteredScreen("Former", SquadName);
+	}
 }
 
 // I have the list item, but how do I get the data?
@@ -57,7 +74,7 @@ simulated function OpenSquadDetails(SquadScreen_ListItem Data) {
 	}
 	if (Detail.DeceasedMembers.Length > 0) StrDetails = StrDetails $ "\nDeceased Members:";
 	for (i = 0; i < Detail.DeceasedMembers.Length; i++) {
-		StrDetails = StrDetails $ "\n"@Detail.DeceasedMembers[i];
+		StrDetails = StrDetails $ "\n"@Detail.DeceasedMembers[i].FullName;
 	}
 	StrDetails = StrDetails $ "\nSuccess Rate:"@Detail.MissionClearanceRate;
 	if (Detail.WinRateAgainstWarlock != "") {
@@ -103,6 +120,7 @@ simulated function OpenSquadDetails(SquadScreen_ListItem Data) {
 	// Would probably be _3 if we called it before the dialogue was raised.
 	`LOG(Movie.Pres.ScreenStack.GetCurrentScreen());
 	// theoretically we should be able to find the instance in the stack and add that there.
+	SquadName = Detail.SquadName;
 	Deceased = Spawn(class'UIButton', Movie.Pres.ScreenStack.GetCurrentScreen());
 	Deceased.InitButton('DeceasedList', "View Deceased Soldiers", DeceasedButtonClicked, eUIButtonStyle_NONE);
 	Deceased.SetPosition(100, 880);

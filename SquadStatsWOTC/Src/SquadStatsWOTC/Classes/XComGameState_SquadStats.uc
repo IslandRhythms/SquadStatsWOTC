@@ -4,6 +4,10 @@ class XComGameState_SquadStats extends XComGameState_BaseObject;
 struct SoldierDetails {
 	var string FullName;
 	var int SoldierID;
+	var int SoldierRank;
+	var string SoldierRankImage;
+	var string SoldierFlag;
+	var bool bIsAlive;
 };
 
 struct ChosenInformation {
@@ -16,7 +20,7 @@ struct ChosenInformation {
 struct SquadDetails {
 	var array<SoldierDetails> CurrentMembers;
 	var array<SoldierDetails> PastMembers;
-	var array<String> DeceasedMembers; // can keep as an array of strings because once they're dead, there is no coming back.
+	var array<SoldierDetails> DeceasedMembers; // can keep as an array of strings because once they're dead, there is no coming back.
 	var array<String> PastSquadNames;
 	var array<String> MissionNamesWins;
 	var array<String> MissionNamesLosses;
@@ -273,15 +277,20 @@ function SquadDetails SetGateCrasherData(SquadDetails TeamData, XComGameState_Ba
 	foreach `XCOMHQ.Squad(UnitRef) {
 		Unit = XComGameState_Unit(`XCOMHISTORY.GetGameStateForObjectID(UnitRef.ObjectID));
 		SoldierData.FullName = Unit.GetFullName();
+		SoldierData.SoldierRank = Unit.GetRank();
+		SoldierData.SoldierRankImage = GetRankImage(SoldierData.SoldierRank);
+		SoldierData.SoldierID = UnitRef.ObjectID;
+		SoldierData.SoldierFlag = Unit.GetCountryTemplate().FlagImage;
 		if (Unit.IsAlive()) {
+			SoldierData.bIsAlive = true;
 			if (!SquadLeaderSet) {
 				TeamData.CurrentSquadLeader = SoldierData.FullName;
 				SquadLeaderSet = true;
 			}
-			SoldierData.SoldierID = UnitRef.ObjectID;
 			TeamData.CurrentMembers.AddItem(SoldierData);
 		} else {
-			TeamData.DeceasedMembers.AddItem(SoldierData.FullName);
+			SoldierData.bIsAlive = false;
+			TeamData.DeceasedMembers.AddItem(SoldierData);
 		}
 	}
 	TeamData.NumMissions = 1.0;
@@ -362,12 +371,13 @@ function string GetChosenType(XComGameState_AdventChosen ChosenState) {
 
 // for updating var array<String> DeceasedMembers;
 // when a soldier dies, they are removed from the squad. Therefore, we must use our internal current members array.
-function array<String> UpdateDeceasedSquadMembers(array<String> Dead, XComGameState_LWPersistentSquad Roster) {
+function array<SoldierDetails> UpdateDeceasedSquadMembers(array<SoldierDetails> Dead, XComGameState_LWPersistentSquad Roster) {
 	local XcomGameState_Unit Unit;
 	local StateObjectReference UnitRef;
 	local int Index, i, Found;
 	local string FullName;
-	local array<String> UpdatedList;
+	local SoldierDetails Detail;
+	local array<SoldierDetails> UpdatedList;
 	for (Index = 0; Index < Dead.Length; Index++) {
 		UpdatedList.AddItem(Dead[Index]);
 	}
@@ -376,7 +386,15 @@ function array<String> UpdateDeceasedSquadMembers(array<String> Dead, XComGameSt
 	{
 		Unit = XComGameState_Unit(`XCOMHISTORY.GetGameStateForObjectID(UnitRef.ObjectID));
 		if (!Unit.IsAlive()) {
-			FullName = Unit.GetFullName();
+			Detail.FullName = Unit.GetFullName();
+			Detail.SoldierRank = Unit.GetRank();
+			Detail.SoldierRankImage = GetRankImage(Detail.SoldierRank);
+			Detail.SoldierID = UnitRef.ObjectID;
+			Detail.SoldierFlag = Unit.GetCountryTemplate().FlagImage;
+			Detail.bIsAlive = false;
+			if (Detail.SoldierFlag == "") {
+				Detail.SoldierFlag = "img:///gfxComponents.UIXcomEmblem";
+			}
 			// if they don't belong to the current squad, find the squad they belong to.
 			if (!Roster.UnitIsInSquad(UnitRef)) { // this should cover the case where they reassign the soldier to this squad.
 				// find the squad this soldier belongs to and add them to the deceased array
@@ -387,12 +405,12 @@ function array<String> UpdateDeceasedSquadMembers(array<String> Dead, XComGameSt
 					// It is possible that this soldier does not belong to any squad. In which case they don't go in any squad pages.
 					`log("If the number isn't negative, they belong to a squad on record"@Found);
 					if (Found != INDEX_NONE) {
-						SquadData[Index].DeceasedMembers.AddItem(FullName);
+						SquadData[Index].DeceasedMembers.AddItem(Detail);
 						SquadData[Index].NumSoldiers -= 1;
 					}
 				}
 			} else {
-				UpdatedList.AddItem(FullName);
+				UpdatedList.AddItem(Detail);
 			}
 		}
 	}
@@ -476,28 +494,32 @@ function string CalculateAverageRank(XComGameState_LWPersistentSquad Team) {
 	}
 	AverageRank = float(Rank) / float(Units.Length);
 	Result = Round(AverageRank);
-	// assests in the content browser are borked. names look wrong but logos are right.
-	if (Result == 0) {
-		RankResult = "img:///UILibrary_Common.rank_rookie";
-	} else if (Result == 1) {
-		RankResult = "img:///UILibrary_Common.rank_squaddie";
-	} else if (Result == 2) {
-		RankResult = "img:///UILibrary_Common.rank_lieutenant";
-	} else if (Result == 3) {
-		RankResult = "img:///UILibrary_Common.rank_sergeant";
-	} else if (Result == 4) {
-		RankResult = "img:///UILibrary_Common.rank_captain";
-	} else if (Result == 5) {
-		RankResult = "img:///UILibrary_Common.rank_major";
-	} else if (Result == 6) {
-		RankResult = "img:///UILibrary_Common.rank_colonel";
-	} else if (Result == 7) {
-		RankResult = "img:///UILibrary_Common.rank_commander";
-	} else { // LWOTC Support
-		RankResult = "img:///UILibrary_Common.rank_fieldmarshall";
-	}
+	RankResult = GetRankImage(Result);
 	return RankResult;
 
+}
+
+// assests in the content browser are borked. names look wrong but logos are right.
+function string GetRankImage(int Result) {
+	if (Result == 0) {
+		return "img:///UILibrary_Common.rank_rookie";
+	} else if (Result == 1) {
+		return "img:///UILibrary_Common.rank_squaddie";
+	} else if (Result == 2) {
+		return "img:///UILibrary_Common.rank_lieutenant";
+	} else if (Result == 3) {
+		return "img:///UILibrary_Common.rank_sergeant";
+	} else if (Result == 4) {
+		return "img:///UILibrary_Common.rank_captain";
+	} else if (Result == 5) {
+		return "img:///UILibrary_Common.rank_major";
+	} else if (Result == 6) {
+		return "img:///UILibrary_Common.rank_colonel";
+	} else if (Result == 7) {
+		return "img:///UILibrary_Common.rank_commander";
+	} else { // LWOTC Support
+		return "img:///UILibrary_Common.rank_fieldmarshall";
+	}
 }
 
 

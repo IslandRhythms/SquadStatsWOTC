@@ -19,7 +19,7 @@ simulated function InitFilteredScreen(String filter, String SquadName)
 	FilteredList.m_eListType = eUIPersonnel_Scientists;
 	FilteredList.bIsNavigable = true;
 	// FilteredList.OnItemClicked = OnSquadSelected;
-	MC.FunctionString("SetScreenHeader", "Squad History and Stats");
+	MC.FunctionString("SetScreenHeader", filter@SquadName);
 }
 /*
 // this function may be redundant for our purposes

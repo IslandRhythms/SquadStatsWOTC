@@ -26,9 +26,14 @@ simulated function OnListItemClicked(UIList ContainerList, int ItemIndex) {
 
 simulated function DeceasedButtonClicked(UIButton ButtonClicked) {
 	local FilteredScreen FS;
+	local UIDialogueBox Box;
 	`LOG("THE DECEASED BUTTON WORKS");
 	if( `HQPRES.ScreenStack.IsNotInStack(class'FilteredScreen') )
 	{
+		
+		Box = UIDialogueBox(Movie.Pres.ScreenStack.GetCurrentScreen());
+		Box.RemoveDialog();
+		`HQPRES.ScreenStack.PopFirstInstanceOfClass(class'SquadScreen', false);
 		FS = `HQPRES.Spawn(class'FilteredScreen',`HQPRES);
 
         `HQPRES.ScreenStack.Push(FS);
@@ -41,6 +46,7 @@ simulated function FormerButtonClicked(UIButton ButtonClicked) {
 	`LOG("THE FORMER BUTTON WORKS");
 	if( `HQPRES.ScreenStack.IsNotInStack(class'FilteredScreen') )
 	{
+		`HQPRES.ScreenStack.PopFirstInstanceOfClass(class'SquadScreen', false);
 		FS = `HQPRES.Spawn(class'FilteredScreen',`HQPRES);
 
         `HQPRES.ScreenStack.Push(FS);

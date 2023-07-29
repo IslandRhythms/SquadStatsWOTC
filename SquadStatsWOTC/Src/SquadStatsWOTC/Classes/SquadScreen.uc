@@ -25,27 +25,30 @@ simulated function OnListItemClicked(UIList ContainerList, int ItemIndex) {
 }
 
 simulated function DeceasedButtonClicked(UIButton ButtonClicked) {
-	local FilteredScreen FS;
+	local DeceasedScreen DS;
 	local UIDialogueBox Box;
 	`LOG("THE DECEASED BUTTON WORKS");
-	if( `HQPRES.ScreenStack.IsNotInStack(class'FilteredScreen') )
+	if( `HQPRES.ScreenStack.IsNotInStack(class'DeceasedScreen') )
 	{
 		
 		Box = UIDialogueBox(Movie.Pres.ScreenStack.GetCurrentScreen());
 		Box.RemoveDialog();
 		`HQPRES.ScreenStack.PopFirstInstanceOfClass(class'SquadScreen', false);
-		FS = `HQPRES.Spawn(class'FilteredScreen',`HQPRES);
+		DS = `HQPRES.Spawn(class'DeceasedScreen',`HQPRES);
 
-        `HQPRES.ScreenStack.Push(FS);
-		FS.InitFilteredScreen("Deceased", SquadName);
+        `HQPRES.ScreenStack.Push(DS);
+		DS.InitDeceasedScreen(SquadName);
 	}
 }
 
 simulated function FormerButtonClicked(UIButton ButtonClicked) {
 	local FilteredScreen FS;
+	local UIDialogueBox Box;
 	`LOG("THE FORMER BUTTON WORKS");
 	if( `HQPRES.ScreenStack.IsNotInStack(class'FilteredScreen') )
 	{
+		Box = UIDialogueBox(Movie.Pres.ScreenStack.GetCurrentScreen());
+		Box.RemoveDialog();
 		`HQPRES.ScreenStack.PopFirstInstanceOfClass(class'SquadScreen', false);
 		FS = `HQPRES.Spawn(class'FilteredScreen',`HQPRES);
 

@@ -1,25 +1,22 @@
 // This is an Unreal Script
 
+// This is an Unreal Script
+
 class FilteredScreen extends UIPersonnel dependson(XComGameState_SquadStats);
 
-var UIPersonnel FilteredList;
+var UIPersonnel DeceasedList;
 
 var UINavigationHelp NavHelp;
 var SquadScreen_ListItem LastHighlighted;
-var String ListType;
-var String SelectSquad;
 
-
-simulated function InitFilteredScreen(String filter, String SquadName)
+simulated function InitDeceasedScreen(String SquadName)
 {
-	ListType = filter;
-	SelectSquad = SquadName;
-	FilteredList = Spawn(class'UIPersonnel', self);
+	DeceasedList = Spawn(class'UIPersonnel', self);
 	// FilteredList.OverrideInterpTime = 0.0;
-	FilteredList.m_eListType = eUIPersonnel_Scientists;
-	FilteredList.bIsNavigable = true;
+	DeceasedList.m_eListType = eUIPersonnel_Scientists;
+	DeceasedList.bIsNavigable = true;
 	// FilteredList.OnItemClicked = OnSquadSelected;
-	MC.FunctionString("SetScreenHeader", filter@SquadName);
+	MC.FunctionString("SetScreenHeader", "Deceased"@SquadName);
 }
 /*
 // this function may be redundant for our purposes
@@ -66,7 +63,7 @@ simulated function CreateSortHeaders()
 
 simulated function OnCancel()
 {
-	Movie.Stack.PopFirstInstanceOfClass(class'SquadScreen');
+	Movie.Stack.PopFirstInstanceOfClass(class'DeceasedScreen');
 
 	Movie.Pres.PlayUISound(eSUISound_MenuClose);
 }
@@ -77,12 +74,12 @@ simulated function PopulateListInstantly() {
 	local array<SoldierDetails> List;
 	Stats = XComGameState_SquadStats(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_SquadStats', true));
 	Index = Stats.SquadData.Find('SquadName', SelectSquad);
-	List = ListType == "Deceased" ? Stats.SquadData[Index].DeceasedMembers : Stats.SquadData[Index].PastMembers;
+	List = Stats.SquadData[Index].DeceasedMembers;
 	for (i = 0; i < List.Length; i++) {
 		// m_kList.OnItemClicked = OnListItemClicked; // This is if we want to do something if they click on an entry
 		Spawn(class'FilteredScreen_ListItem', m_kList.itemContainer).InitListItem(List[i]);
 	}
-	MC.FunctionString("SetEmptyLabel", List.Length == 0 ? "No Entries Found": "");
+	MC.FunctionString("SetEmptyLabel", List.Length == 0 ? "No Deceased Found": "");
 }
 
 simulated function PopulateListSequentially(UIPanel Control) {

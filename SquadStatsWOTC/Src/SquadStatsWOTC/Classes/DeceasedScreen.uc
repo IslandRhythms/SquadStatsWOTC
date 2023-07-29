@@ -2,21 +2,21 @@
 
 // This is an Unreal Script
 
-class FilteredScreen extends UIPersonnel dependson(XComGameState_SquadStats);
+class DeceasedScreen extends UIPersonnel dependson(XComGameState_SquadStats);
 
 var UIPersonnel DeceasedList;
 
 var UINavigationHelp NavHelp;
 var SquadScreen_ListItem LastHighlighted;
 
-simulated function InitDeceasedScreen(String SquadName)
+simulated function InitDeceasedScreen()
 {
 	DeceasedList = Spawn(class'UIPersonnel', self);
 	// FilteredList.OverrideInterpTime = 0.0;
 	DeceasedList.m_eListType = eUIPersonnel_Scientists;
 	DeceasedList.bIsNavigable = true;
 	// FilteredList.OnItemClicked = OnSquadSelected;
-	MC.FunctionString("SetScreenHeader", "Deceased"@SquadName);
+	MC.FunctionString("SetScreenHeader", "Deceased");
 }
 /*
 // this function may be redundant for our purposes
@@ -73,7 +73,7 @@ simulated function PopulateListInstantly() {
 	local int i, Index;
 	local array<SoldierDetails> List;
 	Stats = XComGameState_SquadStats(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_SquadStats', true));
-	Index = Stats.SquadData.Find('SquadName', SelectSquad);
+	Index = Stats.SquadData.Find('SquadName', Stats.SelectedSquad);
 	List = Stats.SquadData[Index].DeceasedMembers;
 	for (i = 0; i < List.Length; i++) {
 		// m_kList.OnItemClicked = OnListItemClicked; // This is if we want to do something if they click on an entry

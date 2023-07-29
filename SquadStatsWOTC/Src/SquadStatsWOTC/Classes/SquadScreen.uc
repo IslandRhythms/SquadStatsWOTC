@@ -61,14 +61,12 @@ simulated function FormerButtonClicked(UIButton ButtonClicked) {
 
 // I have the list item, but how do I get the data?
 simulated function OpenSquadDetails(SquadScreen_ListItem Data) {
-	local XComGameState_SquadStats Stats;
 	local TDialogueBoxData DialogData;
 	local UIButton Deceased, Former;
 	local String StrDetails;
 	local SquadDetails Detail;
 	local Texture2D StaffPicture;
 	local int i;
-	Stats =  XComGameState_SquadStats(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_SquadStats', true));
 	Detail = Data.Data;
 	DialogData.eType = eDialog_Normal;
 	DialogData.strTitle = Detail.SquadName;
@@ -133,7 +131,6 @@ simulated function OpenSquadDetails(SquadScreen_ListItem Data) {
 	// Would probably be _3 if we called it before the dialogue was raised.
 	`LOG(Movie.Pres.ScreenStack.GetCurrentScreen());
 	// theoretically we should be able to find the instance in the stack and add that there.
-	Stats.SelectedSquad = Detail.SquadName;
 	Deceased = Spawn(class'UIButton', Movie.Pres.ScreenStack.GetCurrentScreen());
 	Deceased.InitButton('DeceasedList', "View Deceased Soldiers", DeceasedButtonClicked, eUIButtonStyle_NONE);
 	Deceased.SetPosition(100, 880);

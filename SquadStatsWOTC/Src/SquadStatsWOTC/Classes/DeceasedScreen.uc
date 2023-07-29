@@ -73,7 +73,7 @@ simulated function PopulateListInstantly() {
 	local int i, Index;
 	local array<SoldierDetails> List;
 	Stats = XComGameState_SquadStats(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_SquadStats', true));
-	Index = Stats.SquadData.Find('SquadName', Stats.SelectedSquad);
+	Index = Stats.SquadData.Find('SquadName', "Marauders");
 	List = Stats.SquadData[Index].DeceasedMembers;
 	for (i = 0; i < List.Length; i++) {
 		// m_kList.OnItemClicked = OnListItemClicked; // This is if we want to do something if they click on an entry

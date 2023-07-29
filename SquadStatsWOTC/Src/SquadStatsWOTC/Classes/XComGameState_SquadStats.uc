@@ -55,8 +55,6 @@ var localized string squadLabel;
 
 var bool XCOMSquadLinked;
 
-var string SelectedSquad;
-
 function UpdateSquadData() {
 	local XComGameState_LWSquadManager SquadMgr;
 	local XComGameState_LWPersistentSquad Squad;

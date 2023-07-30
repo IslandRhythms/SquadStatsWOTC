@@ -5,7 +5,8 @@ class SquadScreen extends UIPersonnel dependson(XComGameState_SquadStats);
 var UIPersonnel SquadList;
 var UINavigationHelp NavHelp;
 var SquadScreen_ListItem LastHighlighted;
-
+var UIButton Deceased;
+var UIButton Former;
 
 simulated function InitSquadScreen()
 {
@@ -29,7 +30,8 @@ simulated function DeceasedButtonClicked(UIButton ButtonClicked) {
 	`LOG("THE DECEASED BUTTON WORKS");
 	if( `HQPRES.ScreenStack.IsNotInStack(class'DeceasedScreen') )
 	{
-		
+		Deceased.Remove();
+		Former.Remove();
 		Box = UIDialogueBox(Movie.Pres.ScreenStack.GetCurrentScreen());
 		Box.RemoveDialog();
 		`HQPRES.ScreenStack.PopFirstInstanceOfClass(class'SquadScreen', false);
@@ -62,7 +64,7 @@ simulated function FormerButtonClicked(UIButton ButtonClicked) {
 // I have the list item, but how do I get the data?
 simulated function OpenSquadDetails(SquadScreen_ListItem Data) {
 	local TDialogueBoxData DialogData;
-	local UIButton Deceased, Former;
+	local XComGameState_SquadStats Stats;
 	local String StrDetails;
 	local SquadDetails Detail;
 	local Texture2D StaffPicture;
@@ -127,6 +129,8 @@ simulated function OpenSquadDetails(SquadScreen_ListItem Data) {
 	DialogData.strText = StrDetails;
 	DialogData.strImagePath = class'UIUtilities_Image'.static.ValidateImagePath(Detail.SquadIcon);
 	Movie.Pres.UIRaiseDialog( DialogData );
+	Stats = XComGameState_SquadStats(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_SquadStats', true));
+	Stats.SelectedSquad = Detail.SquadName;
 	// UIDialogueBox_4
 	// Would probably be _3 if we called it before the dialogue was raised.
 	`LOG(Movie.Pres.ScreenStack.GetCurrentScreen());

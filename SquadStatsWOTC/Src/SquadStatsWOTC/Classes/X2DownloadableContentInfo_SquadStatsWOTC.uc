@@ -30,6 +30,23 @@ static event OnPostMission() {
 	CheckUpdateOrCreateNewGameState();
 }
 
+static event OnPreMission(XComGameState NewGameState, XComGameState_MissionSite MissionState) {
+	local XComGameState_SquadStats Stats;
+	local XComGameStateHistory History;
+
+	History = `XCOMHISTORY;
+	Stats = XComGameState_SquadStats(History.GetSingleGameStateObjectForClass(class 'XComGameState_SquadStats', true));
+	if (Stats == none)
+    {
+        Stats = XComGameState_SquadStats(NewGameState.CreateNewStateObject(class'XComGameState_SquadStats'));
+    }
+    else
+    {
+        Stats = XComGameState_SquadStats(NewGameState.ModifyStateObject(Stats.Class, Stats.ObjectID));
+    }
+	Stats.UpdateAllCurrentSquadMembers();
+}
+
 static final function CheckUpdateOrCreateNewGameState()
 {
 	local XComGameState_SquadStats Log;

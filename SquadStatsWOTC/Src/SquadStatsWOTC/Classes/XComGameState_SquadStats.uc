@@ -52,8 +52,11 @@ var array<SquadDetails> SquadData;
 var array<ChosenInformation> TheChosen;
 
 var localized string squadLabel;
+var localized string UnitFlagImage;
 
 var bool XCOMSquadLinked;
+
+var string SelectedSquad;
 
 function UpdateSquadData() {
 	local XComGameState_LWSquadManager SquadMgr;
@@ -81,6 +84,10 @@ function UpdateSquadData() {
 	}
 	SquadMgr = XComGameState_LWSquadManager(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_LWSquadManager', true));
 	Squad = XComGameState_LWPersistentSquad(`XCOMHISTORY.GetGameStateForObjectID(SquadMgr.LastMissionSquad.ObjectID));
+	`LOG("Total Amount of people in the squad"@Squad.SquadSoldiers.Length);
+	for (Index = 0; Index < Squad.SquadSoldiers.Length; Index++) {
+		`LOG("ObjectID of squad member is"@Squad.SquadSoldiers[Index].ObjectID);
+	}
 	BattleData = XComGameState_BattleData(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_BattleData'));
 	// Check if the Squad already exists in our Data.
 	// Actually for this to function without issue we can't allow re-linking. So if a user deletes a squad. thats it. Squad is perma decommisioned.
@@ -96,7 +103,7 @@ function UpdateSquadData() {
 			SquadData[Exists].SquadIcon = Squad.SquadImagePath != "" ? Squad.SquadImagePath : Squad.DefaultSquadImagePath; // could change the icon, stay up to date
 			SquadData[Exists].NumMissions += 1.0;
 			SquadData[Exists].CurrentSquadLeader = AssignSquadLeader(Squad, SquadData[Exists]);
-			SquadData[Exists].DeceasedMembers = UpdateDeceasedSquadMembers(SquadData[Exists].DeceasedMembers, Squad);
+			UpdateDeceasedSquadMembers();
 			SquadData[Exists].PastMembers = UpdateRosterHistory(Squad, SquadData[Exists].CurrentMembers, SquadData[Exists].PastMembers);
 			SquadData[Exists].CurrentMembers.Length = 0;
 			SquadData[Exists].CurrentMembers = UpdateCurrentMembers(Squad);
@@ -121,10 +128,9 @@ function UpdateSquadData() {
 				EntryData.SquadName = Squad.sSquadName;
 				EntryData.NumMissions += 1.0;
 				// handle case where first soldier is dead
-				EntryData.CurrentSquadLeader = AssignSquadLeader(Squad, EntryData);
-				EntryData.DeceasedMembers = UpdateDeceasedSquadMembers(EntryData.DeceasedMembers, Squad);
-				EntryData.CurrentMembers.Length = 0;
 				EntryData.CurrentMembers = UpdateCurrentMembers(Squad);
+				EntryData.CurrentSquadLeader = AssignSquadLeader(Squad, EntryData);
+				UpdateDeceasedSquadMembers();
 				Units = Squad.GetSoldiers();
 				EntryData.NumSoldiers = Units.Length;
 				EntryData.AverageRank = CalculateAverageRank(Squad);
@@ -180,7 +186,7 @@ function UpdateSquadData() {
 		SquadData[Index].SquadIcon = Squad.SquadImagePath != "" ? Squad.SquadImagePath : Squad.DefaultSquadImagePath; // could change the icon, stay up to date
 		SquadData[Index].NumMissions += 1.0;
 		SquadData[Index].CurrentSquadLeader = AssignSquadLeader(Squad, SquadData[Index]);
-		SquadData[Index].DeceasedMembers = UpdateDeceasedSquadMembers(SquadData[Index].DeceasedMembers, Squad);
+		UpdateDeceasedSquadMembers();
 		SquadData[Index].PastMembers = UpdateRosterHistory(Squad, SquadData[Index].CurrentMembers, SquadData[Index].PastMembers);
 		SquadData[Index].CurrentMembers.Length = 0;
 		SquadData[Index].CurrentMembers = UpdateCurrentMembers(Squad);
@@ -369,52 +375,35 @@ function string GetChosenType(XComGameState_AdventChosen ChosenState) {
 }
 
 
-// for updating var array<String> DeceasedMembers;
-// when a soldier dies, they are removed from the squad. Therefore, we must use our internal current members array.
-function array<SoldierDetails> UpdateDeceasedSquadMembers(array<SoldierDetails> Dead, XComGameState_LWPersistentSquad Roster) {
+
+// when a soldier dies, they are removed from the squad manager data. Therefore, we must use our internal current members array.
+function UpdateDeceasedSquadMembers() {
 	local XcomGameState_Unit Unit;
 	local StateObjectReference UnitRef;
-	local int Index, i, Found;
-	local string FullName;
+	local int Index, Found;
 	local SoldierDetails Detail;
-	local array<SoldierDetails> UpdatedList;
-	for (Index = 0; Index < Dead.Length; Index++) {
-		UpdatedList.AddItem(Dead[Index]);
-	}
 	// need to handle case where the deceased solider was borrowed from another squad
 	foreach `XCOMHQ.Squad(UnitRef)
 	{
 		Unit = XComGameState_Unit(`XCOMHISTORY.GetGameStateForObjectID(UnitRef.ObjectID));
 		if (!Unit.IsAlive()) {
-			Detail.FullName = Unit.GetFullName();
-			Detail.SoldierRank = Unit.GetRank();
-			Detail.SoldierRankImage = GetRankImage(Detail.SoldierRank);
-			Detail.SoldierID = UnitRef.ObjectID;
-			Detail.SoldierFlag = Unit.GetCountryTemplate().FlagImage;
-			Detail.bIsAlive = false;
-			if (Detail.SoldierFlag == "") {
-				Detail.SoldierFlag = "img:///gfxComponents.UIXcomEmblem";
-			}
-			// if they don't belong to the current squad, find the squad they belong to.
-			if (!Roster.UnitIsInSquad(UnitRef)) { // this should cover the case where they reassign the soldier to this squad.
-				// find the squad this soldier belongs to and add them to the deceased array
-				for (Index = 0; Index < SquadData.Length; Index++) {
-					// Iterate through the current members we have on record.
-					`log("what is the objectID"@UnitRef.ObjectID);
-					Found = SquadData[Index].CurrentMembers.Find('SoldierID', UnitRef.ObjectID);
-					// It is possible that this soldier does not belong to any squad. In which case they don't go in any squad pages.
-					`log("If the number isn't negative, they belong to a squad on record"@Found);
-					if (Found != INDEX_NONE) {
-						SquadData[Index].DeceasedMembers.AddItem(Detail);
-						SquadData[Index].NumSoldiers -= 1;
-					}
+			Detail = GetSoldierDetails(Unit);
+			// find the squad this soldier belongs to and add them to the deceased array
+			// dead soliders are immediately taken out of the squad, therefore can't rely on Squad manager functions.
+			for (Index = 0; Index < SquadData.Length; Index++) {
+				// Iterate through the current members we have on record.
+				`log("what is the objectID"@UnitRef.ObjectID);
+				Found = SquadData[Index].CurrentMembers.Find('SoldierID', UnitRef.ObjectID);
+				// It is possible that this soldier does not belong to any squad. In which case they don't go in any squad pages.
+				`log("If the number isn't negative, they belong to a squad on record"@Found);
+				`log("the squad they belong to is"@SquadData[Index].SquadName);
+				if (Found != INDEX_NONE) {
+					SquadData[Index].DeceasedMembers.AddItem(Detail);
+					SquadData[Index].NumSoldiers -= 1;
 				}
-			} else {
-				UpdatedList.AddItem(Detail);
 			}
 		}
-	}
-	return UpdatedList;
+	 }
 }
 
 // for updating var array<SoldierDetails> PastMembers;
@@ -520,6 +509,44 @@ function string GetRankImage(int Result) {
 	} else { // LWOTC Support
 		return "img:///UILibrary_Common.rank_fieldmarshall";
 	}
+}
+
+// run this before every mission so if someone dies we can properly 
+// attribute them to the correct squad
+function UpdateAllCurrentSquadMembers() {
+	local XComGameState_LWSquadManager Manager;
+	local StateObjectReference Ref;
+	local XComGameState_LWPersistentSquad Team;
+	local SoldierDetails Data;
+	local array <XComGameState_Unit> Units;
+	local int Index, i;
+	Manager = XComGameState_LWSquadManager(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_LWSquadManager', true));
+	foreach Manager.Squads(Ref) {
+		Team = XComGameState_LWPersistentSquad(`XCOMHISTORY.GetGameStateForObjectID(Ref.ObjectID));
+		Index = SquadData.Find('SquadID', Team.ObjectID);
+		if (Index != INDEX_NONE) { // We have the squad on record
+			SquadData[Index].CurrentMembers.Length = 0;
+			Units = Team.GetSoldiers();
+			for (i = 0; i < Units.Length; i++) {
+				Data = GetSoldierDetails(Units[i]);
+				SquadData[Index].CurrentMembers.AddItem(Data);
+			}
+		}
+	}
+}
+
+function SoldierDetails GetSoldierDetails(XComGameState_Unit Unit) {
+	local SoldierDetails Detail;
+	Detail.SoldierID = Unit.ObjectID;
+	Detail.FullName = Unit.GetFullName();
+	Detail.SoldierRank = Unit.GetRank();
+	Detail.SoldierRankImage = GetRankImage(Detail.SoldierRank);
+	Detail.bIsAlive = Unit.IsAlive();
+	Detail.SoldierFlag = Unit.GetCountryTemplate().FlagImage;
+	if (Detail.SoldierFlag == "") {
+		Detail.SoldierFlag = UnitFlagImage;
+	}
+	return Detail;
 }
 
 

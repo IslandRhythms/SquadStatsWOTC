@@ -4,3 +4,4 @@ TooltipShortcut="View Squad Details"
 
 [XComGameState_SquadStats]
 squadLabel = "XCOM"
+UnitFlagImage = "img:///gfxComponents.UIXcomEmblem"

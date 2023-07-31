@@ -36,6 +36,9 @@
     <Content Include="Src\SquadStatsWOTC\Classes\DeceasedScreen.uc">
       <SubType>Content</SubType>
     </Content>
+    <Content Include="Src\SquadStatsWOTC\Classes\FilteredScreen.uc">
+      <SubType>Content</SubType>
+    </Content>
     <Content Include="Src\SquadStatsWOTC\Classes\FilteredScreen_ListItem.uc">
       <SubType>Content</SubType>
     </Content>

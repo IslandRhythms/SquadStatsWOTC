@@ -2,12 +2,12 @@
 class XComGameState_SquadStats extends XComGameState_BaseObject;
 
 struct SoldierDetails {
-	var string FullName;
+	var string FullName; // Mission Name
 	var int SoldierID;
 	var int SoldierRank;
-	var string SoldierRankImage;
-	var string SoldierFlag;
-	var bool bIsAlive;
+	var string SoldierRankImage; // small picture
+	var string SoldierFlag; // big picture
+	var bool bIsAlive; // mission success?
 };
 
 struct ChosenInformation {
@@ -57,6 +57,7 @@ var localized string UnitFlagImage;
 var bool XCOMSquadLinked;
 
 var string SelectedSquad;
+var string SelectedList;
 
 function UpdateSquadData() {
 	local XComGameState_LWSquadManager SquadMgr;

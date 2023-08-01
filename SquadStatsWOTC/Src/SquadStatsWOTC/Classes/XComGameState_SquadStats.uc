@@ -378,6 +378,7 @@ function string GetChosenType(XComGameState_AdventChosen ChosenState) {
 
 
 // when a soldier dies, they are removed from the squad manager data. Therefore, we must use our internal current members array.
+// we also must go through every registered squad that has them registered as a past member and and change their status to KIA.
 function UpdateDeceasedSquadMembers() {
 	local XcomGameState_Unit Unit;
 	local StateObjectReference UnitRef;
@@ -514,24 +515,36 @@ function string GetRankImage(int Result) {
 
 // run this before every mission so if someone dies we can properly 
 // attribute them to the correct squad
+// should also update past members array
 function UpdateAllCurrentSquadMembers() {
 	local XComGameState_LWSquadManager Manager;
 	local StateObjectReference Ref;
 	local XComGameState_LWPersistentSquad Team;
 	local SoldierDetails Data;
 	local array <XComGameState_Unit> Units;
-	local int Index, i;
+	local int Index, i, Found, Check;
 	Manager = XComGameState_LWSquadManager(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_LWSquadManager', true));
 	foreach Manager.Squads(Ref) {
 		Team = XComGameState_LWPersistentSquad(`XCOMHISTORY.GetGameStateForObjectID(Ref.ObjectID));
 		Index = SquadData.Find('SquadID', Team.ObjectID);
 		if (Index != INDEX_NONE) { // We have the squad on record
-			SquadData[Index].CurrentMembers.Length = 0;
-			Units = Team.GetSoldiers();
+			Units = Team.GetSoldiers(); // currently in the squad via squad manager
+			// loop through our internal array and see if anyone has been reassigned.
+			for (i = 0; i < SquadData[Index].CurrentMembers.Length; i++) {
+				Found = Units.Find('ObjectID', SquadData[Index].CurrentMembers[i]);
+				if (Found == INDEX_NONE) { // This soldier is a past member now
+					Check = SquadData[Index].PastMembers.Find('SoldierID', SquadData[Index].CurrentMembers[i]);
+					if (Check == INDEX_NONE) { // Check if they're already in the array
+						SquadData[Index].PastMembers.AddItem(SquadData[Index].CurrentMembers[i]);
+					}
+				}
+			}
+			SquadData[Index].CurrentMembers.Length = 0; // Recalculate the current members array
 			for (i = 0; i < Units.Length; i++) {
 				Data = GetSoldierDetails(Units[i]);
 				SquadData[Index].CurrentMembers.AddItem(Data);
 			}
+
 		}
 	}
 }

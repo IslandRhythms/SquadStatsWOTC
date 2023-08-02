@@ -140,10 +140,10 @@ simulated function OpenSquadDetails(SquadScreen_ListItem Data) {
 	// theoretically we should be able to find the instance in the stack and add that there.
 	Deceased = Spawn(class'UIButton', Movie.Pres.ScreenStack.GetCurrentScreen());
 	Deceased.InitButton('DeceasedList', "View Deceased Soldiers", DeceasedButtonClicked, eUIButtonStyle_NONE);
-	Deceased.SetPosition(50, 880);
+	Deceased.SetPosition(850, 750);
 	Former = Spawn(class 'UIButton', Movie.Pres.ScreenStack.GetCurrentScreen());
 	Former.InitButton('FormerList', "View Former Squad Mates", FormerButtonClicked, eUIButtonStyle_NONE);
-	Former.SetPosition(150, 770);
+	Former.SetPosition(600, 750);
 }
 
 simulated function CreateSortHeaders()
@@ -176,8 +176,8 @@ simulated function CreateSortHeaders()
 
 simulated function OnCancel()
 {
-	// Deceased.Remove();
-	// Former.Remove();
+	Deceased.Remove();
+	Former.Remove();
 	Movie.Stack.PopFirstInstanceOfClass(class'SquadScreen');
 	Movie.Pres.PlayUISound(eSUISound_MenuClose);
 }

@@ -402,13 +402,11 @@ function UpdateDeceasedSquadMembers() {
 }
 
 // resets the array and populates with Squad.GetSoldiers();
-// must run after update roster history
 function array<SoldierDetails> UpdateCurrentMembers(XComGameState_LWPersistentSquad Team) {
 	local SoldierDetails Data;
 	local array <XComGameState_Unit> Units;
 	local array<SoldierDetails> UpdatedList;
 	local int Index;
-	local string FullName;
 
 	Units = Team.GetSoldiers();
 

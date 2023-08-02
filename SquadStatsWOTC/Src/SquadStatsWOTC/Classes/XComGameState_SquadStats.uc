@@ -367,7 +367,6 @@ function string GetChosenType(XComGameState_AdventChosen ChosenState) {
 
 
 // when a soldier dies, they are removed from the squad manager data. Therefore, we must use our internal current members array.
-// TODO: we also must go through every registered squad that has them registered as a past member and and change their status to KIA.
 function UpdateDeceasedSquadMembers() {
 	local XcomGameState_Unit Unit;
 	local StateObjectReference UnitRef;
@@ -383,20 +382,19 @@ function UpdateDeceasedSquadMembers() {
 			// dead soliders are immediately taken out of the squad, therefore can't rely on Squad manager functions.
 			for (Index = 0; Index < SquadData.Length; Index++) {
 				// Iterate through the current members we have on record.
+				// It is possible that this soldier does not belong to any squad. In which case they don't go in any squad pages.
 				`log("what is the objectID"@UnitRef.ObjectID);
 				Found = SquadData[Index].CurrentMembers.Find('SoldierID', UnitRef.ObjectID); // even though they are dead, they are still in the current members array
-				// It is possible that this soldier does not belong to any squad. In which case they don't go in any squad pages.
 				`log("If the number isn't negative, they belong to a squad on record"@Found);
 				`log("the squad they belong to is"@SquadData[Index].SquadName);
 				if (Found != INDEX_NONE) {
 					SquadData[Index].DeceasedMembers.AddItem(Detail);
 					SquadData[Index].NumSoldiers -= 1;
-
 				}
 				Found = SquadData[Index].PastMembers.Find('SoldierID', UnitRef.ObjectID);
 				// they are a past member for this squad, change their status to dead.
 				if (Found != INDEX_NONE) {
-
+					SquadData[Index].PastMembers[Found].bIsAlive = false;
 				}
 			}
 		}

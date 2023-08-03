@@ -3,11 +3,32 @@ class XComGameState_SquadStats extends XComGameState_BaseObject;
 
 struct SoldierDetails {
 	var string FullName; // Mission Name
+	var string SoldierNickName;
 	var int SoldierID;
 	var int SoldierRank;
 	var string SoldierRankImage; // small picture
 	var string SoldierFlag; // big picture
 	var bool bIsAlive; // mission success?
+	var int Missions;
+	var int Kills;
+	var int DaysOnAvenger;
+	var int DaysInjured;
+	var int AttacksMade;
+	var int DamageDealt;
+	var int AttacksSurvived;
+	var String MissionDied;
+	var String KilledDate;
+	var String CauseOfDeath;
+	var String Epitaph;
+
+	var string CountryName;
+	var string RankName;
+	var string ClassName;
+
+	var string FirstName;
+	var string LastName;
+	var string NickName;
+	var name CountryTemplateName;
 };
 
 struct ChosenInformation {
@@ -57,7 +78,7 @@ var localized string UnitFlagImage;
 var bool XCOMSquadLinked;
 
 var string SelectedSquad;
-var string SelectedList;
+var string SelectedList; // Past, Deceased, Current, Missions
 
 function UpdateSquadData() {
 	local XComGameState_LWSquadManager SquadMgr;
@@ -516,8 +537,14 @@ function UpdateAllCurrentSquadMembers() {
 
 function SoldierDetails GetSoldierDetails(XComGameState_Unit Unit) {
 	local SoldierDetails Detail;
-	Detail.SoldierID = Unit.ObjectID;
-	Detail.FullName = Unit.GetFullName();
+	local XComGameState_Analytics Analytics;
+	local int Hours, Days;
+	local XComGameState_BattleData BattleData;
+
+	Analytics = XComGameState_Analytics(`XCOMHISTORY.GetSingleGameStateObjectForClass(class'XComGameState_Analytics'));
+	BattleData = XComGameState_BattleData(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_BattleData'));
+	Detail.SoldierID = Unit.GetReference().ObjectID;
+	Detail.FullName = Unit.GetName(eNameType_FullNick);
 	Detail.SoldierRank = Unit.GetRank();
 	Detail.SoldierRankImage = GetRankImage(Detail.SoldierRank);
 	Detail.bIsAlive = Unit.IsAlive();
@@ -525,6 +552,19 @@ function SoldierDetails GetSoldierDetails(XComGameState_Unit Unit) {
 	if (Detail.SoldierFlag == "") {
 		Detail.SoldierFlag = UnitFlagImage;
 	}
+	Hours = Analytics.GetUnitFloatValue( "ACC_UNIT_SERVICE_LENGTH", Unit.GetReference() );
+	Days = int(Hours / 24.0f);
+	Detail.DaysOnAvenger = Days;
+	Detail.CauseOfDeath = Unit.m_strCauseOfDeath;
+	Hours = Analytics.GetUnitFloatValue( "ACC_UNIT_HEALING", Unit.GetReference() );
+	Days = int( Hours / 24.0f );
+	Detail.DaysInjured = Days;
+	Detail.AttacksMade = Analytics.GetUnitFloatValue( "ACC_UNIT_SUCCESSFUL_ATTACKS", Unit.GetReference() );
+	Detail.DamageDealt = Analytics.GetUnitFloatValue( "ACC_UNIT_DEALT_DAMAGE", Unit.GetReference() );
+	Detail.AttacksSurvived = Analytics.GetUnitFloatValue( "ACC_UNIT_ABILITIES_RECIEVED", Unit.GetReference() );
+	Detail.MissionDied = BattleData.m_strOpname;
+	Detail.KilledDate = class'X2StrategyGameRulesetDataStructures'.static.GetDateString(BattleData.LocalTime, true);
+	Detail.Epitaph = Unit.m_strEpitaph;
 	return Detail;
 }
 

@@ -87,7 +87,7 @@ simulated function CreateSortHeaders()
 simulated function OnCancel()
 {
 	Movie.Stack.PopFirstInstanceOfClass(class'FilteredScreen');
-
+	// Movie.Stack.PopFirstInstanceOfClass(class'SquadScreen');
 	Movie.Pres.PlayUISound(eSUISound_MenuClose);
 }
 

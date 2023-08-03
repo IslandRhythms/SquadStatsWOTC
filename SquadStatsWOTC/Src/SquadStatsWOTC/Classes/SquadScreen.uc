@@ -37,7 +37,7 @@ simulated function DeceasedButtonClicked(UIButton ButtonClicked) {
 		Former.Remove();
 		Box = UIDialogueBox(Movie.Pres.ScreenStack.GetCurrentScreen());
 		Box.RemoveDialog();
-		`HQPRES.ScreenStack.PopFirstInstanceOfClass(class'SquadScreen', false); // may not want to pop this
+		// `HQPRES.ScreenStack.PopFirstInstanceOfClass(class'SquadScreen', false); // may not want to pop this
 		FS = `HQPRES.Spawn(class'FilteredScreen',`HQPRES);
 
         `HQPRES.ScreenStack.Push(FS);

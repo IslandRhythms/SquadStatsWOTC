@@ -565,6 +565,10 @@ function SoldierDetails GetSoldierDetails(XComGameState_Unit Unit) {
 	Detail.MissionDied = BattleData.m_strOpname;
 	Detail.KilledDate = class'X2StrategyGameRulesetDataStructures'.static.GetDateString(BattleData.LocalTime, true);
 	Detail.Epitaph = Unit.m_strEpitaph;
+	Detail.RankName = class'X2ExperienceConfig'.static.GetRankName(Unit.GetSoldierRank(), Unit.GetSoldierClassTemplateName());
+	Detail.CountryName = Unit.GetCountryTemplate().DisplayName;
+	Detail.ClassName = Unit.GetSoldierClassTemplate().DisplayName;
+	Detail.CountryTemplateName = Unit.GetCountry();
 	return Detail;
 }
 

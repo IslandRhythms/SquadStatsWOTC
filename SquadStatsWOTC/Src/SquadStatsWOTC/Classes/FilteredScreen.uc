@@ -15,20 +15,46 @@ simulated function InitFilterScreen(string ListType)
 	// FilteredList.OnItemClicked = OnSquadSelected;
 	MC.FunctionString("SetScreenHeader", ListType@"List");
 }
-/*
-// this function may be redundant for our purposes
+
+
 simulated function OnListItemClicked(UIList ContainerList, int ItemIndex) {
 	if (!FilteredScreen_ListItem(ContainerList.GetItem(ItemIndex)).IsDisabled) {
-		OpenSquadDetails(SquadScreen_ListItem(ContainerList.GetItem(ItemIndex)));
+		OpenSoldierDetails(FilteredScreen_ListItem(ContainerList.GetItem(ItemIndex)));
 	}
 }
 
-// same here
-// I have the list item, but how do I get the data?
-simulated function OpenSquadDetails(SquadScreen_ListItem Data) {
-	
+
+simulated function OpenSoldierDetails(FilteredScreen_ListItem Data) {
+	local TDialogueBoxData DialogData;
+	local String StrDetails;
+	local SoldierDetails Detail;
+	local Texture2D StaffPicture;
+	Detail = Data.Data;
+	DialogData.eType = eDialog_Normal;
+
+	DialogData.strTitle = Detail.FullName@"from"@Detail.CountryName;
+	DialogData.strAccept = class'UIDialogueBox'.default.m_strDefaultAcceptLabel;
+
+	StrDetails = "Achieved rank of"@Detail.RankName@"as"@Detail.ClassName;
+	StrDetails = StrDetails $ "\nMissions participated:" @ Detail.Missions;
+	StrDetails = StrDetails $ "\nEnemies killed:" @ Detail.Kills;
+	StrDetails = StrDetails $ "\nDays served in XCOM:" @ Detail.DaysOnAvenger;
+	StrDetails = StrDetails $ "\nDays spent in infirmary:" @ Detail.DaysInjured;
+	StrDetails = StrDetails $ "\nAttacks made:" @ Detail.AttacksMade;
+	StrDetails = StrDetails $ "\nDamage dealt:" @ Detail.DamageDealt;
+	StrDetails = StrDetails $ "\nAttacks survived:" @ Detail.AttacksSurvived;
+	StrDetails = StrDetails $ "\nDied in" @ Detail.MissionDied @"at"@ Detail.KilledDate;
+	StrDetails = StrDetails $ "\n\n" $ Detail.Epitaph;
+
+	DialogData.strText = StrDetails;
+	StaffPicture = `XENGINE.m_kPhotoManager.GetHeadshotTexture(Detail.CampaignIndex, Detail.SoldierID, 512, 512);
+	if (StaffPicture != none)
+	{
+		DialogData.strImagePath = class'UIUtilities_Image'.static.ValidateImagePath(PathName(StaffPicture));
+	}
+	Movie.Pres.UIRaiseDialog( DialogData );
 }
-*/
+
 
 simulated function CreateSortHeaders()
 {
@@ -75,7 +101,9 @@ simulated function PopulateListInstantly() {
 	List = Stats.SelectedList == "Deceased" ? Stats.SquadData[Index].DeceasedMembers : Stats.SquadData[Index].PastMembers;
 	`LOG("Length of the array"@List.Length);
 	for (i = 0; i < List.Length; i++) {
-		// m_kList.OnItemClicked = OnListItemClicked; // This is if we want to do something if they click on an entry
+		if (Stats.SelectedList == "Deceased") {
+			m_kList.OnItemClicked = OnListItemClicked; // This is if we want to do something if they click on an entry
+		}
 		Spawn(class'FilteredScreen_ListItem', m_kList.itemContainer).InitListItem(List[i]);
 	}
 	MC.FunctionString("SetEmptyLabel", List.Length == 0 ? "No Entries Found": "");

@@ -25,10 +25,9 @@ struct SoldierDetails {
 	var string RankName;
 	var string ClassName;
 
-	var string FirstName;
-	var string LastName;
-	var string NickName;
 	var name CountryTemplateName;
+
+	var int CampaignIndex; // needed for the soldier pic
 };
 
 struct ChosenInformation {
@@ -540,9 +539,14 @@ function SoldierDetails GetSoldierDetails(XComGameState_Unit Unit) {
 	local XComGameState_Analytics Analytics;
 	local int Hours, Days;
 	local XComGameState_BattleData BattleData;
+	local XComGameState_CampaignSettings CampaignSettingsStateObject;
+	local int CampaignIndex;
 
 	Analytics = XComGameState_Analytics(`XCOMHISTORY.GetSingleGameStateObjectForClass(class'XComGameState_Analytics'));
 	BattleData = XComGameState_BattleData(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_BattleData'));
+	CampaignSettingsStateObject = XComGameState_CampaignSettings(`XCOMHISTORY.GetSingleGameStateObjectForClass(class'XComGameState_CampaignSettings', true));
+	CampaignIndex = CampaignSettingsStateObject.GameIndex;
+	Detail.CampaignIndex = CampaignIndex;
 	Detail.SoldierID = Unit.GetReference().ObjectID;
 	Detail.FullName = Unit.GetName(eNameType_FullNick);
 	Detail.SoldierRank = Unit.GetRank();

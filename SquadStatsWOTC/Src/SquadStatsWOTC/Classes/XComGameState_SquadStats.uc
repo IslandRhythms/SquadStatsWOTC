@@ -124,7 +124,7 @@ function UpdateSquadData() {
 		EntryData = SetGateCrasherData(EntryData, BattleData);
 		SquadData.AddItem(EntryData);
 	}
-	else if (Index == INDEX_NONE) { // The first time in our records that this squad went out on a mission. No concept of past members yet
+	else if (Index == INDEX_NONE) { // The first time in our records that this squad went out on a mission.
 		if (Squad.sSquadName == squadLabel && !XCOMSquadLinked) { // Gatecrasher squad has been reactivated. Only exception to the above statement.
 			Exists = SquadData.Find('SquadName', Squad.sSquadname);
 			SquadData[Exists].SquadIcon = Squad.SquadImagePath != "" ? Squad.SquadImagePath : Squad.DefaultSquadImagePath; // could change the icon, stay up to date
@@ -292,9 +292,11 @@ function UpdateClearanceRates(XComGameState_BattleData BattleData, int Index) {
 		SquadData[Index].Wins += 1.0;
 		SquadData[Index].MissionNamesWins.AddItem(BattleData.m_strOpName);
 		SquadData[Index].MissionClearanceRate = (SquadData[Index].Wins / SquadData[Index].NumMissions) * 100 $ "%";
+		SquadData[Index].Missions.AddItem(GetMissionSummaryDetails());
 	} else {
 		SquadData[Index].MissionNamesLosses.AddItem(BattleData.m_strOpName);
 		SquadData[Index].MissionClearanceRate = (SquadData[Index].Wins / SquadData[Index].NumMissions) * 100 $ "%";
+		SquadData[Index].Missions.AddItem(GetMissionSummaryDetails());
 	}
 	if (BattleData.ChosenRef.ObjectID != 0) { // I should be able to put all the stuff that relies on this check in one function, but I don't want to take that time.
 		ChosenState = XComGameState_AdventChosen(`XCOMHISTORY.GetGameStateForObjectID(BattleData.ChosenRef.ObjectID));
@@ -320,20 +322,12 @@ function SquadDetails SetGateCrasherData(SquadDetails TeamData, XComGameState_Ba
 
 	foreach `XCOMHQ.Squad(UnitRef) {
 		Unit = XComGameState_Unit(`XCOMHISTORY.GetGameStateForObjectID(UnitRef.ObjectID));
-		SoldierData.FullName = Unit.GetFullName();
-		SoldierData.SoldierRank = Unit.GetRank();
-		SoldierData.SoldierRankImage = GetRankImage(SoldierData.SoldierRank);
-		SoldierData.SoldierID = UnitRef.ObjectID;
-		SoldierData.SoldierFlag = Unit.GetCountryTemplate().FlagImage;
-		if (Unit.IsAlive()) {
-			SoldierData.bIsAlive = true;
-			if (!SquadLeaderSet) {
-				TeamData.CurrentSquadLeader = SoldierData.FullName;
-				SquadLeaderSet = true;
-			}
-			TeamData.CurrentMembers.AddItem(SoldierData);
-		} else {
-			SoldierData.bIsAlive = false;
+		SoldierData = GetSoldierDetails(Unit);
+		if (Unit.IsAlive() && !Unit.bCaptured) {
+			TeamData.CurrentSquadLeader = SoldierData.FullName;
+		} else if (Unit.bCaptured) {
+			TeamData.PastMembers.AddItem(SoldierData);
+		}	else if (!Unit.IsAlive()) {
 			TeamData.DeceasedMembers.AddItem(SoldierData);
 		}
 	}
@@ -348,6 +342,7 @@ function SquadDetails SetGateCrasherData(SquadDetails TeamData, XComGameState_Ba
 	TeamData.MissionClearanceRate = "100%";
 	TeamData.AverageRank = "img:///UILibrary_Common.rank_squaddie";
 	TeamData.bIsActive = false; // becomes true when they create a squad with the same name
+	TeamData.Missions.AddItem(GetMissionSummaryDetails());
 	return TeamData;
 	// forgo setting SquadID since we'll link it later.
 }
@@ -420,7 +415,7 @@ function UpdateDeceasedSquadMembers() {
 				Found = SquadData[Index].PastMembers.Find('SoldierID', UnitRef.ObjectID);
 				// they are a past member for this squad, change their status to dead.
 				if (Found != INDEX_NONE) {
-					SquadData[Index].PastMembers[Found].bIsAlive = false;
+					SquadData[Index].PastMembers[Found].Status = "KIA";
 				}
 			}
 		}
@@ -557,7 +552,13 @@ function SoldierDetails GetSoldierDetails(XComGameState_Unit Unit) {
 	Detail.FullName = Unit.GetName(eNameType_FullNick);
 	Detail.SoldierRank = Unit.GetRank();
 	Detail.SoldierRankImage = GetRankImage(Detail.SoldierRank);
-	Detail.bIsAlive = Unit.IsAlive();
+	if (!Unit.IsAlive()) {
+		Detail.Status =  "KIA";
+	} else if (Unit.bCaptured) {
+		Detail.Status = "Captured";
+	} else {
+		Detail.Status = "Active";
+	}
 	Detail.SoldierFlag = Unit.GetCountryTemplate().FlagImage;
 	if (Detail.SoldierFlag == "") {
 		Detail.SoldierFlag = UnitFlagImage;

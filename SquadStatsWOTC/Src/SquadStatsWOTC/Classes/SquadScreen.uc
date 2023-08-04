@@ -168,7 +168,7 @@ simulated function OpenSquadDetails(SquadScreen_ListItem Data) {
 	Current.InitButton('CurrentList', "View Current Members", CurrentButtonClicked, eUIButtonStyle_NONE);
 	Current.SetPosition(955, 715);
 	Missions = Spawn(class 'UIButton', Movie.Pres.ScreenStack.GetCurrentScreen());
-	Missions.InitButton("MissionsList", "View Mission Summary", MissionButtonClicked, eUIButtonStyle_NONE);
+	Missions.InitButton('MissionsList', "View Mission Summary", MissionButtonClicked, eUIButtonStyle_NONE);
 	Missions.SetPosition(1070, 715);
 }
 
@@ -204,6 +204,8 @@ simulated function OnCancel()
 {
 	Deceased.Remove();
 	Former.Remove();
+	Current.Remove();
+	Missions.Remove();
 	Movie.Stack.PopFirstInstanceOfClass(class'SquadScreen');
 	Movie.Pres.PlayUISound(eSUISound_MenuClose);
 }

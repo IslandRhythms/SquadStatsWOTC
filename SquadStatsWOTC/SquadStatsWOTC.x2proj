@@ -33,9 +33,6 @@
     <Content Include="Src\LW_Tuple\Classes\LWTuple.uc">
       <SubType>Content</SubType>
     </Content>
-    <Content Include="Src\SquadStatsWOTC\Classes\DeceasedScreen.uc">
-      <SubType>Content</SubType>
-    </Content>
     <Content Include="Src\SquadStatsWOTC\Classes\FilteredScreen.uc">
       <SubType>Content</SubType>
     </Content>

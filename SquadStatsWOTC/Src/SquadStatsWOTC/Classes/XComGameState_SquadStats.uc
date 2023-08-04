@@ -8,7 +8,7 @@ struct SoldierDetails {
 	var int SoldierRank;
 	var string SoldierRankImage; // small picture
 	var string SoldierFlag; // big picture
-	var bool bIsAlive; // mission success?
+	var string Status; // mission success?
 	var int Missions;
 	var int Kills;
 	var int DaysOnAvenger;
@@ -30,6 +30,11 @@ struct SoldierDetails {
 	var int CampaignIndex; // needed for the soldier pic
 };
 
+struct MissionImages {
+	var string MissionThumbnail;
+	var string MissionGraphic;
+};
+
 struct ChosenInformation {
 	var string ChosenType;
 	var string ChosenName;
@@ -44,6 +49,7 @@ struct SquadDetails {
 	var array<String> PastSquadNames;
 	var array<String> MissionNamesWins;
 	var array<String> MissionNamesLosses;
+	var array<SoldierDetails> Missions;
 	var array<ChosenInformation> ChosenEncounters;
 	var string WinRateAgainstWarlock;
 	var string WinRateAgainstHunter;
@@ -574,6 +580,70 @@ function SoldierDetails GetSoldierDetails(XComGameState_Unit Unit) {
 	Detail.ClassName = Unit.GetSoldierClassTemplate().DisplayName;
 	Detail.CountryTemplateName = Unit.GetCountry();
 	return Detail;
+}
+
+function SoldierDetails GetMissionSummaryDetails() {
+	local SoldierDetails MissionData;
+	local MissionImages Pics;
+	local X2MissionTemplateManager MissionTemplateManager;
+	local X2MissionTemplate MissionTemplate;
+	local XComGameState_BattleData BattleData;
+
+	BattleData = XComGameState_BattleData(`XCOMHISTORY.GetSingleGameStateObjectForClass(class'XComGameState_BattleData'));
+	MissionTemplateManager = class'X2MissionTemplateManager'.static.GetMissionTemplateManager();
+	MissionTemplate = MissionTemplateManager.FindMissionTemplate(BattleData.MapData.ActiveMission.MissionName);
+	MissionData.FullName = BattleData.m_strOpName;
+	if (BattleData.bLocalPlayerWon && !BattleData.bMissionAborted) {
+		MissionData.Status = "Success";
+	} else {
+		MissionData.Status = "Failed";
+	}
+	
+	Pics = GetMissionImages(MissionTemplate.DisplayName);
+	MissionData.SoldierRankImage = Pics.MissionGraphic;
+	MissionData.SoldierFlag = Pics.MissionThumbnail;
+	return MissionData;
+}
+
+
+function MissionImages GetMissionImages(string obj) {
+	local MissionImages Images;
+	if (obj == "Defeat Chosen Warlock") {
+		Images.MissionThumbnail = "img:///UILibrary_XPACK_StrategyImages.DarkEvent_Loyalty_Among_Thieves_Warlock";
+		Images.MissionGraphic = "img:///UILibrary_XPACK_Common.MissionIcon_ChosenStronghold";
+	} else if (obj == "Defeat Chosen Assassin") {
+		Images.MissionThumbnail = "img:///UILibrary_XPACK_StrategyImages.DarkEvent_Loyalty_Among_Thieves_Assasin";
+		Images.MissionGraphic = "img:///UILibrary_XPACK_Common.MissionIcon_ChosenStronghold";
+	} else if (obj == "Defeat Chosen Hunter") {
+		Images.MissionThumbnail = "img:///UILibrary_XPACK_StrategyImages.DarkEvent_Loyalty_Among_Thieves_Hunter";
+		Images.MissionGraphic = "img:///UILibrary_XPACK_Common.MissionIcon_ChosenStronghold";
+	} else if (obj == "Rescue Stranded Resistance Agents" || InStr(obj, "Gather Survivors") > -1) {
+		Images.MissionThumbnail = "img:///UILibrary_DLC2Images.Alert_Downed_Skyranger";
+		Images.MissionGraphic = "img:///UILibrary_StrategyImages.X2StrategyMap.MissionIcon_Resistance";
+	} else if (InStr(obj, "Extract VIP") > -1 || obj == "Recover Resistance Operative") {
+		Images.MissionThumbnail = "img:///UILibrary_DLC2Images.Alert_Downed_Skyranger";
+		Images.MissionGraphic = "img:///UILibrary_StrategyImages.X2StrategyMap.MissionIcon_Resistance";
+	} else if (InStr(obj, "Rescue VIP") > -1 || obj == "Rescue Operative from ADVENT Compound") {
+		Images.MissionThumbnail = "img:///UILibrary_XPACK_StrategyImages.DarkEvent_The_Collectors";
+		Images.MissionGraphic = "img:///UILibrary_XPACK_Common.MissionIcon_RescueSoldier";
+	} else if (obj == "Stop the ADVENT Retaliation" || obj == "Haven Assault") {
+		Images.MissionThumbnail = "img:///UILibrary_StrategyImages.X2StrategyMap.Alert_Retaliation";
+		Images.MissionGraphic = "img:///UILibrary_StrategyImages.X2StrategyMap.MissionIcon_Retaliation";
+	} else if (InStr(obj, "Raid") > -1 || obj == "Extract ADVENT Supplies") {
+		Images.MissionThumbnail = "img:///UILibrary_StrategyImages.X2StrategyMap.POI_DeadAdvent";
+		Images.MissionGraphic = "img:///UILibrary_XPACK_Common.MissionIcon_SupplyExtraction";
+	} else if (InStr(obj, "Investigate") > -1 || obj == "Secure the ADVENT Network Tower" || obj == "Assault the Alien Fortress" || obj == "Destroy Avatar Project") { // story
+		Images.MissionThumbnail = "img:///UILibrary_StrategyImages.X2StrategyMap.POI_WhatsInTheBarn";
+		Images.MissionGraphic = "img:///UILibrary_StrategyImages.X2StrategyMap.MissionIcon_Goldenpath";
+	} else if (obj == "Defend the Avenger" || obj == "Repel the Chosen Assault") {
+		Images.MissionThumbnail = "img:///UILibrary_XPACK_StrategyImages.Alert_Avenger_Assault";
+		Images.MissionGraphic = "img:///UILibrary_DLC2Images.MissionIcon_POI_Special2"; // could cause a crash if they don't have dlc installed possibly
+	} else {
+		Images.MissionThumbnail = "img:///uilibrary_strategyimages.X2StrategyMap.Alert_Objective_Complete";
+		Images.MissionGraphic = "img:///UILibrary_StrategyImages.X2StrategyMap.MissionIcon_GOPS";
+	}
+
+	return Images;
 }
 
 

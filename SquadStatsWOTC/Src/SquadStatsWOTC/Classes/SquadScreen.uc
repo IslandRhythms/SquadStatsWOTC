@@ -5,8 +5,7 @@ class SquadScreen extends UIPersonnel dependson(XComGameState_SquadStats);
 var UIPersonnel SquadList;
 var UINavigationHelp NavHelp;
 var SquadScreen_ListItem LastHighlighted;
-var UIButton Deceased;
-var UIButton Former;
+var UIButton Former, Deceased, Current, Missions;
 
 simulated function InitSquadScreen()
 {
@@ -30,37 +29,74 @@ simulated function DeceasedButtonClicked(UIButton ButtonClicked) {
 	local XComGameState_SquadStats Stats;
 	Stats = XComGameState_SquadStats(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_SquadStats', true));
 	`LOG("THE DECEASED BUTTON WORKS");
-	if( `HQPRES.ScreenStack.IsNotInStack(class'FilteredScreen') )
-	{
-		Stats.SelectedList = "Deceased";
-		Deceased.Remove();
-		Former.Remove();
-		Box = UIDialogueBox(Movie.Pres.ScreenStack.GetCurrentScreen());
-		Box.RemoveDialog();
-		// `HQPRES.ScreenStack.PopFirstInstanceOfClass(class'SquadScreen', false); // may not want to pop this
-		FS = `HQPRES.Spawn(class'FilteredScreen',`HQPRES);
-
-        `HQPRES.ScreenStack.Push(FS);
-		FS.InitFilterScreen(Stats.SelectedList);
-	}
+	`HQPRES.ScreenStack.PopFirstInstanceOfClass(class'FilteredScreen', false);
+	Stats.SelectedList = "Deceased";
+	Box = UIDialogueBox(Movie.Pres.ScreenStack.GetCurrentScreen());
+	Box.RemoveDialog();
+	FS = `HQPRES.Spawn(class'FilteredScreen',`HQPRES);
+	Deceased.Remove();
+	Former.Remove();
+	Current.Remove();
+	Missions.Remove();
+    `HQPRES.ScreenStack.Push(FS);
+	FS.InitFilterScreen(Stats.SelectedList);
 }
 
 simulated function FormerButtonClicked(UIButton ButtonClicked) {
-	/*
 	local FilteredScreen FS;
 	local UIDialogueBox Box;
-	`LOG("THE FORMER BUTTON WORKS");
-	if( `HQPRES.ScreenStack.IsNotInStack(class'FilteredScreen') )
-	{
-		Box = UIDialogueBox(Movie.Pres.ScreenStack.GetCurrentScreen());
-		Box.RemoveDialog();
-		`HQPRES.ScreenStack.PopFirstInstanceOfClass(class'SquadScreen', false);
-		FS = `HQPRES.Spawn(class'FilteredScreen',`HQPRES);
+	local XComGameState_SquadStats Stats;
+	Stats = XComGameState_SquadStats(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_SquadStats', true));
+	`LOG("THE Former BUTTON WORKS");
+	`HQPRES.ScreenStack.PopFirstInstanceOfClass(class'FilteredScreen', false);
+	Stats.SelectedList = "Past";
+	Box = UIDialogueBox(Movie.Pres.ScreenStack.GetCurrentScreen());
+	Box.RemoveDialog();
+	FS = `HQPRES.Spawn(class'FilteredScreen',`HQPRES);
+	Deceased.Remove();
+	Former.Remove();
+	Current.Remove();
+	Missions.Remove();
+    `HQPRES.ScreenStack.Push(FS);
+	FS.InitFilterScreen(Stats.SelectedList);
+}
 
-        `HQPRES.ScreenStack.Push(FS);
-		FS.InitFilteredScreen("Former", SquadName);
-	}
-	*/
+simulated function CurrentButtonClicked(UIButton ButtonClicked) {
+	local FilteredScreen FS;
+	local UIDialogueBox Box;
+	local XComGameState_SquadStats Stats;
+	Stats = XComGameState_SquadStats(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_SquadStats', true));
+	`LOG("THE Current BUTTON WORKS");
+	`HQPRES.ScreenStack.PopFirstInstanceOfClass(class'FilteredScreen', false);
+	Stats.SelectedList = "Current";
+	Box = UIDialogueBox(Movie.Pres.ScreenStack.GetCurrentScreen());
+	Box.RemoveDialog();
+	FS = `HQPRES.Spawn(class'FilteredScreen',`HQPRES);
+	Deceased.Remove();
+	Former.Remove();
+	Current.Remove();
+	Missions.Remove();
+    `HQPRES.ScreenStack.Push(FS);
+	FS.InitFilterScreen(Stats.SelectedList);
+}
+
+simulated function MissionButtonClicked(UIButton ButtonClicked) {
+	local FilteredScreen FS;
+	local UIDialogueBox Box;
+	local XComGameState_SquadStats Stats;
+	Stats = XComGameState_SquadStats(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_SquadStats', true));
+	`LOG("THE Mission BUTTON WORKS");
+	`HQPRES.ScreenStack.PopFirstInstanceOfClass(class'FilteredScreen', false);
+	Stats.SelectedList = "Missions";
+	Box = UIDialogueBox(Movie.Pres.ScreenStack.GetCurrentScreen());
+	Box.RemoveDialog();
+	FS = `HQPRES.Spawn(class'FilteredScreen',`HQPRES);
+	Deceased.Remove();
+	Former.Remove();
+	Current.Remove();
+	Missions.Remove();
+    `HQPRES.ScreenStack.Push(FS);
+	FS.InitFilterScreen(Stats.SelectedList);
 }
 
 
@@ -111,7 +147,7 @@ simulated function OpenSquadDetails(SquadScreen_ListItem Data) {
 	}
 	StrDetails = StrDetails $ "\nNumber of Missions Deployed:"@Detail.NumMissions;
 	StrDetails = StrDetails $ "\nSuccessful Operations:"@Detail.MissionNamesWins.Length;
-	StrDetails = StrDetails $ "\nFailed Operations:"@Detail.MissionNamesLosses.Length
+	StrDetails = StrDetails $ "\nFailed Operations:"@Detail.MissionNamesLosses.Length;
 
 	DialogData.strText = StrDetails;
 	DialogData.strImagePath = class'UIUtilities_Image'.static.ValidateImagePath(Detail.SquadIcon);
@@ -122,12 +158,18 @@ simulated function OpenSquadDetails(SquadScreen_ListItem Data) {
 	// Would probably be _3 if we called it before the dialogue was raised.
 	`LOG(Movie.Pres.ScreenStack.GetCurrentScreen());
 	// theoretically we should be able to find the instance in the stack and add that there.
-	Deceased = Spawn(class'UIButton', Movie.Pres.ScreenStack.GetCurrentScreen());
-	Deceased.InitButton('DeceasedList', "View Deceased Soldiers", DeceasedButtonClicked, eUIButtonStyle_NONE);
-	Deceased.SetPosition(850, 750);
 	Former = Spawn(class 'UIButton', Movie.Pres.ScreenStack.GetCurrentScreen());
 	Former.InitButton('FormerList', "View Former Squad Mates", FormerButtonClicked, eUIButtonStyle_NONE);
-	Former.SetPosition(600, 750);
+	Former.SetPosition(625, 715);
+	Deceased = Spawn(class'UIButton', Movie.Pres.ScreenStack.GetCurrentScreen());
+	Deceased.InitButton('DeceasedList', "View Deceased Soldiers", DeceasedButtonClicked, eUIButtonStyle_NONE);
+	Deceased.SetPosition(840, 715);
+	Current = Spawn(class 'UIButton', Movie.Pres.ScreenStack.GetCurrentScreen());
+	Current.InitButton('CurrentList', "View Current Members", CurrentButtonClicked, eUIButtonStyle_NONE);
+	Current.SetPosition(955, 715);
+	Missions = Spawn(class 'UIButton', Movie.Pres.ScreenStack.GetCurrentScreen());
+	Missions.InitButton("MissionsList", "View Mission Summary", MissionButtonClicked, eUIButtonStyle_NONE);
+	Missions.SetPosition(1070, 715);
 }
 
 simulated function CreateSortHeaders()

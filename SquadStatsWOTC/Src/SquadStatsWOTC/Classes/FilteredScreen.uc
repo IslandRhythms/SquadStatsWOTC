@@ -98,7 +98,8 @@ simulated function PopulateListInstantly() {
 	Stats = XComGameState_SquadStats(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_SquadStats', true));
 	Index = Stats.SquadData.Find('SquadName', Stats.SelectedSquad);
 	`LOG("Index of the theoretically found squad"@Index);
-	List = Stats.SelectedList == "Deceased" ? Stats.SquadData[Index].DeceasedMembers : Stats.SquadData[Index].PastMembers;
+	List = Stats.SelectedList == "Deceased" ? Stats.SquadData[Index].DeceasedMembers : Stats.SelectedList == "Past" ? Stats.SquadData[Index].PastMembers :
+	Stats.SelectedList == "Current" ? Stats.SquadData[Index].CurrentMembers : Stats.SelectedList == "Missions" ? Stats.SquadData[Index].Missions : Stats.SquadData[Index].DeceasedMembers;
 	`LOG("Length of the array"@List.Length);
 	for (i = 0; i < List.Length; i++) {
 		if (Stats.SelectedList == "Deceased") {

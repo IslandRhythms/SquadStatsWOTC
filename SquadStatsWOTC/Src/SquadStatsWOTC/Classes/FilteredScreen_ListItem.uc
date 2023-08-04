@@ -98,11 +98,7 @@ simulated function UpdateData()
 	//get and set display strings
 	UnitsName = Data.FullName;
 	// Active or Decomissioned
-	if (Data.bIsAlive) {
-		Classification = "Active";
-	} else {
-		Classification = "KIA";
-	}
+	Classification = Data.Status;
 
 	// SetLocationOrStatusString(Unit, TemplateName);
 	// LocStatusText.SetTitle(class'UIUtilities_Text'.static.GetColoredText(Caps(m_StrStatus), i_eState, 18, "RIGHT") );

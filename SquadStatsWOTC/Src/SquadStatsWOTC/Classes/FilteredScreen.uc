@@ -16,14 +16,15 @@ simulated function InitFilterScreen(string ListType)
 	MC.FunctionString("SetScreenHeader", ListType@"List");
 }
 
-
+/*
 simulated function OnListItemClicked(UIList ContainerList, int ItemIndex) {
 	if (!FilteredScreen_ListItem(ContainerList.GetItem(ItemIndex)).IsDisabled) {
 		OpenSoldierDetails(FilteredScreen_ListItem(ContainerList.GetItem(ItemIndex)));
 	}
 }
+*/
 
-
+/*
 simulated function OpenSoldierDetails(FilteredScreen_ListItem Data) {
 	local TDialogueBoxData DialogData;
 	local String StrDetails;
@@ -54,6 +55,7 @@ simulated function OpenSoldierDetails(FilteredScreen_ListItem Data) {
 	}
 	Movie.Pres.UIRaiseDialog( DialogData );
 }
+*/
 
 
 simulated function CreateSortHeaders()
@@ -97,14 +99,9 @@ simulated function PopulateListInstantly() {
 	local array<SoldierDetails> List;
 	Stats = XComGameState_SquadStats(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_SquadStats', true));
 	Index = Stats.SquadData.Find('SquadName', Stats.SelectedSquad);
-	`LOG("Index of the theoretically found squad"@Index);
 	List = Stats.SelectedList == "Deceased" ? Stats.SquadData[Index].DeceasedMembers : Stats.SelectedList == "Past" ? Stats.SquadData[Index].PastMembers :
 	Stats.SelectedList == "Current" ? Stats.SquadData[Index].CurrentMembers : Stats.SelectedList == "Missions" ? Stats.SquadData[Index].Missions : Stats.SquadData[Index].DeceasedMembers;
-	`LOG("Length of the array"@List.Length);
 	for (i = 0; i < List.Length; i++) {
-		if (Stats.SelectedList == "Deceased") {
-			m_kList.OnItemClicked = OnListItemClicked; // This is if we want to do something if they click on an entry
-		}
 		Spawn(class'FilteredScreen_ListItem', m_kList.itemContainer).InitListItem(List[i]);
 	}
 	MC.FunctionString("SetEmptyLabel", List.Length == 0 ? "No Entries Found": "");

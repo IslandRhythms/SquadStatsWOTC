@@ -169,6 +169,7 @@ function UpdateSquadData() {
 				EntryData.NumSoldiers = Units.Length;
 				EntryData.AverageRank = CalculateAverageRank(Squad);
 				EntryData.bIsActive = true;
+				EntryData.Missions.AddItem(GetMissionSummaryDetails());
 				EntryData.ID = SquadData.Length + 1;
 				// Chosen Data stuff
 				if(BattleData.ChosenRef.ObjectID != 0) {

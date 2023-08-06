@@ -115,11 +115,6 @@ simulated function OpenSquadDetails(SquadScreen_ListItem Data) {
 	StrDetails = "Squad Launched on"@Detail.SquadInceptionDate;
 	StrDetails = StrDetails $ "\nCurrent Squad Leader: "@Detail.CurrentSquadLeader;
 	StrDetails = StrDetails $ "\nTotal Troops in Squad:"@Detail.NumSoldiers;
-	// commenting out fields that don't really add anything/overflow the allotted space
-	/*StrDetails = StrDetails $ "\nCurrent Members:";
-	for (i = 0; i < Detail.CurrentMembers.Length;i++) {
-		StrDetails = StrDetails $ "\n"@Detail.CurrentMembers[i].FullName;
-	}*/
 	StrDetails = StrDetails $ "\nSuccess Rate:"@Detail.MissionClearanceRate;
 	if (Detail.WinRateAgainstWarlock != "") {
 		StrDetails = StrDetails $ "\nSuccess Rate Against Warlock:"@Detail.WinRateAgainstWarlock;
@@ -159,17 +154,17 @@ simulated function OpenSquadDetails(SquadScreen_ListItem Data) {
 	`LOG(Movie.Pres.ScreenStack.GetCurrentScreen());
 	// theoretically we should be able to find the instance in the stack and add that there.
 	Former = Spawn(class 'UIButton', Movie.Pres.ScreenStack.GetCurrentScreen());
-	Former.InitButton('FormerList', "View Former Squad Mates", FormerButtonClicked, eUIButtonStyle_NONE);
-	Former.SetPosition(625, 715);
+	Former.InitButton('FormerList', "View Past Units", FormerButtonClicked, eUIButtonStyle_NONE);
+	Former.SetPosition(630, 715);
 	Deceased = Spawn(class'UIButton', Movie.Pres.ScreenStack.GetCurrentScreen());
-	Deceased.InitButton('DeceasedList', "View Deceased Soldiers", DeceasedButtonClicked, eUIButtonStyle_NONE);
-	Deceased.SetPosition(840, 715);
+	Deceased.InitButton('DeceasedList', "View Deceased Units", DeceasedButtonClicked, eUIButtonStyle_NONE);
+	Deceased.SetPosition(780, 715);
 	Current = Spawn(class 'UIButton', Movie.Pres.ScreenStack.GetCurrentScreen());
-	Current.InitButton('CurrentList', "View Current Members", CurrentButtonClicked, eUIButtonStyle_NONE);
-	Current.SetPosition(955, 715);
+	Current.InitButton('CurrentList', "View Current Units", CurrentButtonClicked, eUIButtonStyle_NONE);
+	Current.SetPosition(950, 715);
 	Missions = Spawn(class 'UIButton', Movie.Pres.ScreenStack.GetCurrentScreen());
-	Missions.InitButton('MissionsList', "View Mission Summary", MissionButtonClicked, eUIButtonStyle_NONE);
-	Missions.SetPosition(1070, 715);
+	Missions.InitButton('MissionsList', "View Mission Summaries", MissionButtonClicked, eUIButtonStyle_NONE);
+	Missions.SetPosition(1110, 715);
 }
 
 simulated function CreateSortHeaders()

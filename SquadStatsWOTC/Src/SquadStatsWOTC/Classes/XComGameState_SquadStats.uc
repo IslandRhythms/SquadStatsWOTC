@@ -2,8 +2,37 @@
 class XComGameState_SquadStats extends XComGameState_BaseObject;
 
 struct SoldierDetails {
-	var string FullName;
+	var string FullName; // Mission Name
+	var string SoldierNickName;
 	var int SoldierID;
+	var int SoldierRank;
+	var string SoldierRankImage; // small picture
+	var string SoldierFlag; // big picture
+	var string Status; // mission success?
+	var int Missions;
+	var int Kills;
+	var int DaysOnAvenger;
+	var int DaysInjured;
+	var int AttacksMade;
+	var int DamageDealt;
+	var int AttacksSurvived;
+	var String MissionDied;
+	var String KilledDate;
+	var String CauseOfDeath;
+	var String Epitaph;
+
+	var string CountryName;
+	var string RankName;
+	var string ClassName;
+
+	var name CountryTemplateName;
+
+	var int CampaignIndex; // needed for the soldier pic
+};
+
+struct MissionImages {
+	var string MissionThumbnail;
+	var string MissionGraphic;
 };
 
 struct ChosenInformation {
@@ -16,10 +45,11 @@ struct ChosenInformation {
 struct SquadDetails {
 	var array<SoldierDetails> CurrentMembers;
 	var array<SoldierDetails> PastMembers;
-	var array<String> DeceasedMembers; // can keep as an array of strings because once they're dead, there is no coming back.
+	var array<SoldierDetails> DeceasedMembers; // can keep as an array of strings because once they're dead, there is no coming back.
 	var array<String> PastSquadNames;
 	var array<String> MissionNamesWins;
 	var array<String> MissionNamesLosses;
+	var array<SoldierDetails> Missions;
 	var array<ChosenInformation> ChosenEncounters;
 	var string WinRateAgainstWarlock;
 	var string WinRateAgainstHunter;
@@ -48,8 +78,12 @@ var array<SquadDetails> SquadData;
 var array<ChosenInformation> TheChosen;
 
 var localized string squadLabel;
+var localized string UnitFlagImage;
 
 var bool XCOMSquadLinked;
+
+var string SelectedSquad;
+var string SelectedList; // Past, Deceased, Current, Missions
 
 function UpdateSquadData() {
 	local XComGameState_LWSquadManager SquadMgr;
@@ -58,8 +92,9 @@ function UpdateSquadData() {
 	local XComGameState_BattleData BattleData;
 	local array<XComGameState_Unit> Units;
 	local XComGameState_Unit Unit;
+	local array<StateObjectReference> UnitRefs;
 	local StateObjectReference UnitRef;
-	local int Index, Exists;
+	local int Index, Exists, i;
 	local XComGameState_AdventChosen ChosenState;
 	local ChosenInformation MiniBoss;
 	local SoldierDetails Soldier;
@@ -77,6 +112,10 @@ function UpdateSquadData() {
 	}
 	SquadMgr = XComGameState_LWSquadManager(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_LWSquadManager', true));
 	Squad = XComGameState_LWPersistentSquad(`XCOMHISTORY.GetGameStateForObjectID(SquadMgr.LastMissionSquad.ObjectID));
+	`LOG("Total Amount of people in the squad"@Squad.SquadSoldiers.Length);
+	for (Index = 0; Index < Squad.SquadSoldiers.Length; Index++) {
+		`LOG("ObjectID of squad member is"@Squad.SquadSoldiers[Index].ObjectID);
+	}
 	BattleData = XComGameState_BattleData(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_BattleData'));
 	// Check if the Squad already exists in our Data.
 	// Actually for this to function without issue we can't allow re-linking. So if a user deletes a squad. thats it. Squad is perma decommisioned.
@@ -85,18 +124,23 @@ function UpdateSquadData() {
 		EntryData = SetGateCrasherData(EntryData, BattleData);
 		SquadData.AddItem(EntryData);
 	}
-	else if (Index == INDEX_NONE) { // The first time in our records that this squad went out on a mission
-		if (Squad.sSquadName == squadLabel && !XCOMSquadLinked) { // Gatecrasher squad has been reactivated
-			XCOMSquadLinked = true;
+	else if (Index == INDEX_NONE) { // The first time in our records that this squad went out on a mission.
+		if (Squad.sSquadName == squadLabel && !XCOMSquadLinked) { // Gatecrasher squad has been reactivated. Only exception to the above statement.
 			Exists = SquadData.Find('SquadName', Squad.sSquadname);
 			SquadData[Exists].SquadIcon = Squad.SquadImagePath != "" ? Squad.SquadImagePath : Squad.DefaultSquadImagePath; // could change the icon, stay up to date
 			SquadData[Exists].NumMissions += 1.0;
-			SquadData[Exists].CurrentSquadLeader = AssignSquadLeader(Squad, SquadData[Exists]);
-			SquadData[Exists].DeceasedMembers = UpdateDeceasedSquadMembers(SquadData[Exists].DeceasedMembers, Squad);
-			SquadData[Exists].PastMembers = UpdateRosterHistory(Squad, SquadData[Exists].CurrentMembers, SquadData[Exists].PastMembers);
+			UpdateDeceasedSquadMembers();
+			// Before resetting the current members array, go through the current team and see who is now a past member.
+			UnitRefs = Squad.GetSoldierRefs();
+			for (i = 0; i < SquadData[Exists].CurrentMembers.Length; i++) {
+				Index = UnitRefs.Find('ObjectID', SquadData[Exists].CurrentMembers[i].SoldierID);
+				if (Index == INDEX_NONE) { // could not find this unit in the squad manager current squad members, they are a past member now.
+					SquadData[Exists].PastMembers.AddItem(SquadData[Exists].CurrentMembers[i]);
+				}
+			}
 			SquadData[Exists].CurrentMembers.Length = 0;
 			SquadData[Exists].CurrentMembers = UpdateCurrentMembers(Squad);
-			Units = Squad.GetSoldiers();
+			SquadData[Exists].CurrentSquadLeader = AssignSquadLeader(Squad);
 			SquadData[Exists].NumSoldiers = Units.Length;
 			SquadData[Exists].bIsActive = true;
 			SquadData[Exists].SquadID = SquadMgr.LastMissionSquad.ObjectID;
@@ -105,9 +149,10 @@ function UpdateSquadData() {
 				UpdateChosenInformation(BattleData, Exists);
 			}
 			UpdateClearanceRates(BattleData, Exists);
+			XCOMSquadLinked = true;
 		} else { // not the gatecrasher team.
 
-			// This if statement handles the case where the entire squad dies on the first mission.
+			// This if statement handles the case where the entire squad dies on the first mission. First mission so no concept of past members
 			// If it's their first mission and they all die, don't put them in the books.
 			if (!EveryoneDied) {
 				EntryData.SquadID = SquadMgr.LastMissionSquad.ObjectID;
@@ -117,14 +162,14 @@ function UpdateSquadData() {
 				EntryData.SquadName = Squad.sSquadName;
 				EntryData.NumMissions += 1.0;
 				// handle case where first soldier is dead
-				EntryData.CurrentSquadLeader = AssignSquadLeader(Squad, EntryData);
-				EntryData.DeceasedMembers = UpdateDeceasedSquadMembers(EntryData.DeceasedMembers, Squad);
-				EntryData.CurrentMembers.Length = 0;
 				EntryData.CurrentMembers = UpdateCurrentMembers(Squad);
+				EntryData.CurrentSquadLeader = AssignSquadLeader(Squad);
+				UpdateDeceasedSquadMembers();
 				Units = Squad.GetSoldiers();
 				EntryData.NumSoldiers = Units.Length;
 				EntryData.AverageRank = CalculateAverageRank(Squad);
 				EntryData.bIsActive = true;
+				EntryData.Missions.AddItem(GetMissionSummaryDetails());
 				EntryData.ID = SquadData.Length + 1;
 				// Chosen Data stuff
 				if(BattleData.ChosenRef.ObjectID != 0) {
@@ -166,20 +211,24 @@ function UpdateSquadData() {
 			} 
 		}
 	} else { // The squad returning from the mission exists in the db
+		// check if the current squad name was a past squad name
 		Exists = SquadData[Index].PastSquadNames.Find(Squad.sSquadName);
-		if (Exists == INDEX_NONE) { // This name has not been used in the past by this squad
-			if (SquadData[Index].SquadName != Squad.sSquadName) { // The name has been changed
+		if (Exists == INDEX_NONE) { // brand new name
+			if (SquadData[Index].SquadName != Squad.sSquadName) { // The name in our db does not match the current name, update accordingly
 				SquadData[Index].PastSquadNames.AddItem(SquadData[Index].SquadName);
 				SquadData[Index].SquadName = Squad.sSquadName;
 			}
 		}
+		// this covers if a past squad name was reused.
+		if (SquadData[Index].SquadName != Squad.sSquadName) {
+			SquadData[Index].SquadName = Squad.sSquadName;
+		}
 		SquadData[Index].SquadIcon = Squad.SquadImagePath != "" ? Squad.SquadImagePath : Squad.DefaultSquadImagePath; // could change the icon, stay up to date
 		SquadData[Index].NumMissions += 1.0;
-		SquadData[Index].CurrentSquadLeader = AssignSquadLeader(Squad, SquadData[Index]);
-		SquadData[Index].DeceasedMembers = UpdateDeceasedSquadMembers(SquadData[Index].DeceasedMembers, Squad);
-		SquadData[Index].PastMembers = UpdateRosterHistory(Squad, SquadData[Index].CurrentMembers, SquadData[Index].PastMembers);
+		UpdateDeceasedSquadMembers();
 		SquadData[Index].CurrentMembers.Length = 0;
 		SquadData[Index].CurrentMembers = UpdateCurrentMembers(Squad);
+		SquadData[Index].CurrentSquadLeader = AssignSquadLeader(Squad);
 		Units = Squad.GetSoldiers();
 		SquadData[Index].NumSoldiers = Units.Length;
 		// Chosen Data stuff
@@ -244,9 +293,11 @@ function UpdateClearanceRates(XComGameState_BattleData BattleData, int Index) {
 		SquadData[Index].Wins += 1.0;
 		SquadData[Index].MissionNamesWins.AddItem(BattleData.m_strOpName);
 		SquadData[Index].MissionClearanceRate = (SquadData[Index].Wins / SquadData[Index].NumMissions) * 100 $ "%";
+		SquadData[Index].Missions.AddItem(GetMissionSummaryDetails());
 	} else {
 		SquadData[Index].MissionNamesLosses.AddItem(BattleData.m_strOpName);
 		SquadData[Index].MissionClearanceRate = (SquadData[Index].Wins / SquadData[Index].NumMissions) * 100 $ "%";
+		SquadData[Index].Missions.AddItem(GetMissionSummaryDetails());
 	}
 	if (BattleData.ChosenRef.ObjectID != 0) { // I should be able to put all the stuff that relies on this check in one function, but I don't want to take that time.
 		ChosenState = XComGameState_AdventChosen(`XCOMHISTORY.GetGameStateForObjectID(BattleData.ChosenRef.ObjectID));
@@ -272,16 +323,13 @@ function SquadDetails SetGateCrasherData(SquadDetails TeamData, XComGameState_Ba
 
 	foreach `XCOMHQ.Squad(UnitRef) {
 		Unit = XComGameState_Unit(`XCOMHISTORY.GetGameStateForObjectID(UnitRef.ObjectID));
-		SoldierData.FullName = Unit.GetFullName();
-		if (Unit.IsAlive()) {
-			if (!SquadLeaderSet) {
-				TeamData.CurrentSquadLeader = SoldierData.FullName;
-				SquadLeaderSet = true;
-			}
-			SoldierData.SoldierID = UnitRef.ObjectID;
-			TeamData.CurrentMembers.AddItem(SoldierData);
-		} else {
-			TeamData.DeceasedMembers.AddItem(SoldierData.FullName);
+		SoldierData = GetSoldierDetails(Unit);
+		if (Unit.IsAlive() && !Unit.bCaptured) {
+			TeamData.CurrentSquadLeader = SoldierData.FullName;
+		} else if (Unit.bCaptured) {
+			TeamData.PastMembers.AddItem(SoldierData);
+		}	else if (!Unit.IsAlive()) {
+			TeamData.DeceasedMembers.AddItem(SoldierData);
 		}
 	}
 	TeamData.NumMissions = 1.0;
@@ -295,31 +343,10 @@ function SquadDetails SetGateCrasherData(SquadDetails TeamData, XComGameState_Ba
 	TeamData.MissionClearanceRate = "100%";
 	TeamData.AverageRank = "img:///UILibrary_Common.rank_squaddie";
 	TeamData.bIsActive = false; // becomes true when they create a squad with the same name
+	TeamData.Missions.AddItem(GetMissionSummaryDetails());
 	return TeamData;
 	// forgo setting SquadID since we'll link it later.
 }
-
-/*
-	It is possible for the user to do the following.
-		1. Create two or more squads with the same name
-		2. Delete one
-		3. reuse the name.
-	We need to be able to calculate which squad was deleted to properly update them in the db
-	Therefore, this function's job will be to go through our entries and find the squad that
-	is missing by getting the array of refs from the squad manager
-
-	This is an edge case which should never really trigger. Also
-	there isn't a consistent way to make sure that we get the correct squad because
-	if a user creates more than two squads with the same name and deletes multiple, we can't
-	guarantee an accuracte re-link.
-	Will warn in the comments for now.
-
-
-	function FindMissingSquad() {
-
-	}
-
-*/
 
 function SetStatus(XComGameState_LWSquadManager TeamMgr, array<SquadDetails> TeamData) {
 	local int Index, Exists;
@@ -332,7 +359,7 @@ function SetStatus(XComGameState_LWSquadManager TeamMgr, array<SquadDetails> Tea
 	}
 }
 
-function string AssignSquadLeader(XComGameState_LWPersistentSquad Team, SquadDetails TeamData) {
+function string AssignSquadLeader(XComGameState_LWPersistentSquad Team) {
 	local array<XComGameState_Unit> Units;
 	local XComGameState_Unit Unit;
 	local int Index;
@@ -360,95 +387,53 @@ function string GetChosenType(XComGameState_AdventChosen ChosenState) {
 }
 
 
-// for updating var array<String> DeceasedMembers;
-// when a soldier dies, they are removed from the squad. Therefore, we must use our internal current members array.
-function array<String> UpdateDeceasedSquadMembers(array<String> Dead, XComGameState_LWPersistentSquad Roster) {
+
+// when a soldier dies, they are removed from the squad manager data. Therefore, we must use our internal current members array.
+function UpdateDeceasedSquadMembers() {
 	local XcomGameState_Unit Unit;
 	local StateObjectReference UnitRef;
-	local int Index, i, Found;
-	local string FullName;
-	local array<String> UpdatedList;
-	for (Index = 0; Index < Dead.Length; Index++) {
-		UpdatedList.AddItem(Dead[Index]);
-	}
+	local int Index, Found;
+	local SoldierDetails Detail;
 	// need to handle case where the deceased solider was borrowed from another squad
 	foreach `XCOMHQ.Squad(UnitRef)
 	{
 		Unit = XComGameState_Unit(`XCOMHISTORY.GetGameStateForObjectID(UnitRef.ObjectID));
 		if (!Unit.IsAlive()) {
-			FullName = Unit.GetFullName();
-			// if they don't belong to the current squad, find the squad they belong to.
-			if (!Roster.UnitIsInSquad(UnitRef)) { // this should cover the case where they reassign the soldier to this squad.
-				// find the squad this soldier belongs to and add them to the deceased array
-				for (Index = 0; Index < SquadData.Length; Index++) {
-					// Iterate through the current members we have on record.
-					`log("what is the objectID"@UnitRef.ObjectID);
-					Found = SquadData[Index].CurrentMembers.Find('SoldierID', UnitRef.ObjectID);
-					// It is possible that this soldier does not belong to any squad. In which case they don't go in any squad pages.
-					`log("If the number isn't negative, they belong to a squad on record"@Found);
-					if (Found != INDEX_NONE) {
-						SquadData[Index].DeceasedMembers.AddItem(FullName);
-						SquadData[Index].NumSoldiers -= 1;
-					}
+			Detail = GetSoldierDetails(Unit);
+			// find the squad this soldier belongs to and add them to the deceased array
+			// dead soliders are immediately taken out of the squad, therefore can't rely on Squad manager functions.
+			for (Index = 0; Index < SquadData.Length; Index++) {
+				// Iterate through the current members we have on record.
+				// It is possible that this soldier does not belong to any squad. In which case they don't go in any squad pages.
+				`log("what is the objectID"@UnitRef.ObjectID);
+				Found = SquadData[Index].CurrentMembers.Find('SoldierID', UnitRef.ObjectID); // even though they are dead, they are still in the current members array
+				`log("If the number isn't negative, they belong to a squad on record"@Found);
+				`log("the squad they belong to is"@SquadData[Index].SquadName);
+				if (Found != INDEX_NONE) {
+					SquadData[Index].DeceasedMembers.AddItem(Detail);
+					SquadData[Index].NumSoldiers -= 1;
 				}
-			} else {
-				UpdatedList.AddItem(FullName);
+				Found = SquadData[Index].PastMembers.Find('SoldierID', UnitRef.ObjectID);
+				// they are a past member for this squad, change their status to dead.
+				if (Found != INDEX_NONE) {
+					SquadData[Index].PastMembers[Found].Status = "KIA";
+				}
 			}
 		}
-	}
-	return UpdatedList;
-}
-
-// for updating var array<SoldierDetails> PastMembers;
-/*
- * This function checks the current members assigned to the squad, and see if it matches what's in the data
- * If not, it updates the array accordingly and returns an array of past members.
-*/
-function array<SoldierDetails> UpdateRosterHistory(XComGameState_LWPersistentSquad Team, array<SoldierDetails> CurrentMembers, array<SoldierDetails> PastMembers) {
-	local XComGameState_Unit Unit;
-	local array<StateObjectReference> Units;
-	local StateObjectReference UnitRef;
-	local string FullName;
-	local int Index, Exists, Former;
-
-	Units = Team.GetSoldierRefs(); // This is different from the Units that were deployed.
-	/*  Squad.GetSoldierRefs() gets the refs to the soldiers assigned to the squad. Past soldiers would no longer be in this list. But we should have a record in CurrentMembers
-		If CurrentMembers doesn't contain any of these troops, then the missing ones are past members.
-	*/
-	for (Index = 0; Index < CurrentMembers.Length; Index++) {
-		Exists = Units.Find('ObjectID', CurrentMembers[Index].SoldierID);
-		if (Exists == INDEX_NONE) {
-			// The soldier is not in the current squad. Therefore, they are now a past member.
-			// Now check if they have been a past member before
-			Former = PastMembers.Find('SoldierID', CurrentMembers[Index].SoldierID);
-			// Using the soldierId, get the Unit and check if they're alive. 
-			Unit = XComGameState_Unit(`XCOMHISTORY.GetGameStateForObjectID(CurrentMembers[Index].SoldierID));
-			if (Former == INDEX_NONE && Unit.IsAlive()) {
-				PastMembers.AddItem(CurrentMembers[Index]);
-			}
-		}
-	}
-	return PastMembers;
-
+	 }
 }
 
 // resets the array and populates with Squad.GetSoldiers();
-// must run after update roster history
 function array<SoldierDetails> UpdateCurrentMembers(XComGameState_LWPersistentSquad Team) {
 	local SoldierDetails Data;
 	local array <XComGameState_Unit> Units;
 	local array<SoldierDetails> UpdatedList;
 	local int Index;
-	local string FullName;
 
 	Units = Team.GetSoldiers();
 
 	for (Index = 0; Index < Units.Length; Index++) {
-	// I feel like there is a bug on this line.
-		`log("What is this value"@Units[Index].ObjectID);
-		Data.SoldierID = Units[Index].ObjectID;
-		FullName = Units[Index].GetFullName();
-		Data.FullName = FullName;
+		Data = GetSoldierDetails(Units[Index]);
 		UpdatedList.AddItem(Data);
 	}
 
@@ -476,28 +461,191 @@ function string CalculateAverageRank(XComGameState_LWPersistentSquad Team) {
 	}
 	AverageRank = float(Rank) / float(Units.Length);
 	Result = Round(AverageRank);
-	// assests in the content browser are borked. names look wrong but logos are right.
-	if (Result == 0) {
-		RankResult = "img:///UILibrary_Common.rank_rookie";
-	} else if (Result == 1) {
-		RankResult = "img:///UILibrary_Common.rank_squaddie";
-	} else if (Result == 2) {
-		RankResult = "img:///UILibrary_Common.rank_lieutenant";
-	} else if (Result == 3) {
-		RankResult = "img:///UILibrary_Common.rank_sergeant";
-	} else if (Result == 4) {
-		RankResult = "img:///UILibrary_Common.rank_captain";
-	} else if (Result == 5) {
-		RankResult = "img:///UILibrary_Common.rank_major";
-	} else if (Result == 6) {
-		RankResult = "img:///UILibrary_Common.rank_colonel";
-	} else if (Result == 7) {
-		RankResult = "img:///UILibrary_Common.rank_commander";
-	} else { // LWOTC Support
-		RankResult = "img:///UILibrary_Common.rank_fieldmarshall";
-	}
+	RankResult = GetRankImage(Result);
 	return RankResult;
 
+}
+
+// assests in the content browser are borked. names look wrong but logos are right.
+function string GetRankImage(int Result) {
+	if (Result == 0) {
+		return "img:///UILibrary_Common.rank_rookie";
+	} else if (Result == 1) {
+		return "img:///UILibrary_Common.rank_squaddie";
+	} else if (Result == 2) {
+		return "img:///UILibrary_Common.rank_lieutenant";
+	} else if (Result == 3) {
+		return "img:///UILibrary_Common.rank_sergeant";
+	} else if (Result == 4) {
+		return "img:///UILibrary_Common.rank_captain";
+	} else if (Result == 5) {
+		return "img:///UILibrary_Common.rank_major";
+	} else if (Result == 6) {
+		return "img:///UILibrary_Common.rank_colonel";
+	} else if (Result == 7) {
+		return "img:///UILibrary_Common.rank_commander";
+	} else { // LWOTC Support
+		return "img:///UILibrary_Common.rank_fieldmarshall";
+	}
+}
+
+// run this before every mission so if someone dies we can properly 
+// attribute them to the correct squad
+// because squad XCOM doesn't have an ID until they've completed a mission, they are unaffected by this
+// This updates the current members array as well as the past members array
+function UpdateAllCurrentSquadMembers() {
+	local XComGameState_LWSquadManager Manager;
+	local StateObjectReference Ref;
+	local XComGameState_LWPersistentSquad Team;
+	local SoldierDetails Data;
+	local array <StateObjectReference> UnitRefs;
+	local array <XComGameState_Unit> Units;
+	local int Index, i, Found, Check;
+	Manager = XComGameState_LWSquadManager(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_LWSquadManager', true));
+	foreach Manager.Squads(Ref) {
+		Team = XComGameState_LWPersistentSquad(`XCOMHISTORY.GetGameStateForObjectID(Ref.ObjectID));
+		Index = SquadData.Find('SquadID', Team.ObjectID);
+		if (Index != INDEX_NONE) { // We have the squad on record
+			UnitRefs = Team.GetSoldierRefs(); // currently in the squad via squad manager
+			// loop through our internal array and see if anyone has been reassigned.
+			// this is old data but is ok since that is what we need to cross reference.
+			for (i = 0; i < SquadData[Index].CurrentMembers.Length; i++) {
+				Found = UnitRefs.Find('ObjectID', SquadData[Index].CurrentMembers[i].SoldierID);
+				if (Found == INDEX_NONE) { // This soldier is a past member now
+					Check = SquadData[Index].PastMembers.Find('SoldierID', SquadData[Index].CurrentMembers[i].SoldierID);
+					if (Check == INDEX_NONE) { // Check if they're not already in the past members array
+						SquadData[Index].PastMembers.AddItem(SquadData[Index].CurrentMembers[i]);
+					}
+				} else { // They are a current member on record, even if we do the reset
+					// check that they are not currently on the past members array
+					Check = SquadData[Index].PastMembers.Find('SoldierID', SquadData[Index].CurrentMembers[i].SoldierID);
+					// if they are in the past members array, we need to remove them.
+					if (Check != INDEX_NONE) {
+						SquadData[Index].PastMembers.Remove(Check, 1);
+					}
+				}
+			}
+			SquadData[Index].CurrentMembers.Length = 0; // Recalculate the current members array
+			Units = Team.GetSoldiers();
+			for (i = 0; i < Units.Length; i++) {
+				Data = GetSoldierDetails(Units[i]);
+				SquadData[Index].CurrentMembers.AddItem(Data);
+			}
+
+		}
+	}
+}
+
+function SoldierDetails GetSoldierDetails(XComGameState_Unit Unit) {
+	local SoldierDetails Detail;
+	local XComGameState_Analytics Analytics;
+	local int Hours, Days;
+	local XComGameState_BattleData BattleData;
+	local XComGameState_CampaignSettings CampaignSettingsStateObject;
+	local int CampaignIndex;
+
+	Analytics = XComGameState_Analytics(`XCOMHISTORY.GetSingleGameStateObjectForClass(class'XComGameState_Analytics'));
+	BattleData = XComGameState_BattleData(`XCOMHISTORY.GetSingleGameStateObjectForClass(class 'XComGameState_BattleData'));
+	CampaignSettingsStateObject = XComGameState_CampaignSettings(`XCOMHISTORY.GetSingleGameStateObjectForClass(class'XComGameState_CampaignSettings', true));
+	CampaignIndex = CampaignSettingsStateObject.GameIndex;
+	Detail.CampaignIndex = CampaignIndex;
+	Detail.SoldierID = Unit.GetReference().ObjectID;
+	Detail.FullName = Unit.GetName(eNameType_FullNick);
+	Detail.SoldierRank = Unit.GetRank();
+	Detail.SoldierRankImage = GetRankImage(Detail.SoldierRank);
+	if (!Unit.IsAlive()) {
+		Detail.Status =  "KIA";
+	} else if (Unit.bCaptured) {
+		Detail.Status = "Captured";
+	} else {
+		Detail.Status = "Active";
+	}
+	Detail.SoldierFlag = Unit.GetCountryTemplate().FlagImage;
+	if (Detail.SoldierFlag == "") {
+		Detail.SoldierFlag = UnitFlagImage;
+	}
+	Hours = Analytics.GetUnitFloatValue( "ACC_UNIT_SERVICE_LENGTH", Unit.GetReference() );
+	Days = int(Hours / 24.0f);
+	Detail.DaysOnAvenger = Days;
+	Detail.CauseOfDeath = Unit.m_strCauseOfDeath;
+	Hours = Analytics.GetUnitFloatValue( "ACC_UNIT_HEALING", Unit.GetReference() );
+	Days = int( Hours / 24.0f );
+	Detail.DaysInjured = Days;
+	Detail.AttacksMade = Analytics.GetUnitFloatValue( "ACC_UNIT_SUCCESSFUL_ATTACKS", Unit.GetReference() );
+	Detail.DamageDealt = Analytics.GetUnitFloatValue( "ACC_UNIT_DEALT_DAMAGE", Unit.GetReference() );
+	Detail.AttacksSurvived = Analytics.GetUnitFloatValue( "ACC_UNIT_ABILITIES_RECIEVED", Unit.GetReference() );
+	Detail.MissionDied = BattleData.m_strOpname;
+	Detail.KilledDate = class'X2StrategyGameRulesetDataStructures'.static.GetDateString(BattleData.LocalTime, true);
+	Detail.Epitaph = Unit.m_strEpitaph;
+	Detail.RankName = class'X2ExperienceConfig'.static.GetRankName(Unit.GetSoldierRank(), Unit.GetSoldierClassTemplateName());
+	Detail.CountryName = Unit.GetCountryTemplate().DisplayName;
+	Detail.ClassName = Unit.GetSoldierClassTemplate().DisplayName;
+	Detail.CountryTemplateName = Unit.GetCountry();
+	return Detail;
+}
+
+function SoldierDetails GetMissionSummaryDetails() {
+	local SoldierDetails MissionData;
+	local MissionImages Pics;
+	local X2MissionTemplateManager MissionTemplateManager;
+	local X2MissionTemplate MissionTemplate;
+	local XComGameState_BattleData BattleData;
+
+	BattleData = XComGameState_BattleData(`XCOMHISTORY.GetSingleGameStateObjectForClass(class'XComGameState_BattleData'));
+	MissionTemplateManager = class'X2MissionTemplateManager'.static.GetMissionTemplateManager();
+	MissionTemplate = MissionTemplateManager.FindMissionTemplate(BattleData.MapData.ActiveMission.MissionName);
+	MissionData.FullName = BattleData.m_strOpName;
+	if (BattleData.bLocalPlayerWon && !BattleData.bMissionAborted) {
+		MissionData.Status = "Success";
+	} else {
+		MissionData.Status = "Failed";
+	}
+	
+	Pics = GetMissionImages(MissionTemplate.DisplayName);
+	MissionData.SoldierRankImage = Pics.MissionGraphic;
+	MissionData.SoldierFlag = Pics.MissionThumbnail;
+	return MissionData;
+}
+
+
+function MissionImages GetMissionImages(string obj) {
+	local MissionImages Images;
+	if (obj == "Defeat Chosen Warlock") {
+		Images.MissionThumbnail = "img:///UILibrary_XPACK_StrategyImages.DarkEvent_Loyalty_Among_Thieves_Warlock";
+		Images.MissionGraphic = "img:///UILibrary_XPACK_Common.MissionIcon_ChosenStronghold";
+	} else if (obj == "Defeat Chosen Assassin") {
+		Images.MissionThumbnail = "img:///UILibrary_XPACK_StrategyImages.DarkEvent_Loyalty_Among_Thieves_Assasin";
+		Images.MissionGraphic = "img:///UILibrary_XPACK_Common.MissionIcon_ChosenStronghold";
+	} else if (obj == "Defeat Chosen Hunter") {
+		Images.MissionThumbnail = "img:///UILibrary_XPACK_StrategyImages.DarkEvent_Loyalty_Among_Thieves_Hunter";
+		Images.MissionGraphic = "img:///UILibrary_XPACK_Common.MissionIcon_ChosenStronghold";
+	} else if (obj == "Rescue Stranded Resistance Agents" || InStr(obj, "Gather Survivors") > -1) {
+		Images.MissionThumbnail = "img:///UILibrary_DLC2Images.Alert_Downed_Skyranger";
+		Images.MissionGraphic = "img:///UILibrary_StrategyImages.X2StrategyMap.MissionIcon_Resistance";
+	} else if (InStr(obj, "Extract VIP") > -1 || obj == "Recover Resistance Operative") {
+		Images.MissionThumbnail = "img:///UILibrary_DLC2Images.Alert_Downed_Skyranger";
+		Images.MissionGraphic = "img:///UILibrary_StrategyImages.X2StrategyMap.MissionIcon_Resistance";
+	} else if (InStr(obj, "Rescue VIP") > -1 || obj == "Rescue Operative from ADVENT Compound") {
+		Images.MissionThumbnail = "img:///UILibrary_XPACK_StrategyImages.DarkEvent_The_Collectors";
+		Images.MissionGraphic = "img:///UILibrary_XPACK_Common.MissionIcon_RescueSoldier";
+	} else if (obj == "Stop the ADVENT Retaliation" || obj == "Haven Assault") {
+		Images.MissionThumbnail = "img:///UILibrary_StrategyImages.X2StrategyMap.Alert_Retaliation";
+		Images.MissionGraphic = "img:///UILibrary_StrategyImages.X2StrategyMap.MissionIcon_Retaliation";
+	} else if (InStr(obj, "Raid") > -1 || obj == "Extract ADVENT Supplies") {
+		Images.MissionThumbnail = "img:///UILibrary_StrategyImages.X2StrategyMap.POI_DeadAdvent";
+		Images.MissionGraphic = "img:///UILibrary_XPACK_Common.MissionIcon_SupplyExtraction";
+	} else if (InStr(obj, "Investigate") > -1 || obj == "Secure the ADVENT Network Tower" || obj == "Assault the Alien Fortress" || obj == "Destroy Avatar Project") { // story
+		Images.MissionThumbnail = "img:///UILibrary_StrategyImages.X2StrategyMap.POI_WhatsInTheBarn";
+		Images.MissionGraphic = "img:///UILibrary_StrategyImages.X2StrategyMap.MissionIcon_Goldenpath";
+	} else if (obj == "Defend the Avenger" || obj == "Repel the Chosen Assault") {
+		Images.MissionThumbnail = "img:///UILibrary_XPACK_StrategyImages.Alert_Avenger_Assault";
+		Images.MissionGraphic = "img:///UILibrary_DLC2Images.MissionIcon_POI_Special2"; // could cause a crash if they don't have dlc installed possibly
+	} else {
+		Images.MissionThumbnail = "img:///uilibrary_strategyimages.X2StrategyMap.Alert_Objective_Complete";
+		Images.MissionGraphic = "img:///UILibrary_StrategyImages.X2StrategyMap.MissionIcon_GOPS";
+	}
+
+	return Images;
 }
 
 
@@ -518,6 +666,28 @@ function bool IsModActive(name ModName)
     }
     return false;
 }
+
+/*
+	It is possible for the user to do the following.
+		1. Create two or more squads with the same name
+		2. Delete one
+		3. reuse the name.
+	We need to be able to calculate which squad was deleted to properly update them in the db
+	Therefore, this function's job will be to go through our entries and find the squad that
+	is missing by getting the array of refs from the squad manager
+
+	This is an edge case which should never really trigger. Also
+	there isn't a consistent way to make sure that we get the correct squad because
+	if a user creates more than two squads with the same name and deletes multiple, we can't
+	guarantee an accuracte re-link.
+	Will warn in the comments for now.
+
+
+	function FindMissingSquad() {
+
+	}
+
+*/
 
 DefaultProperties {
 	bSingleton=true;

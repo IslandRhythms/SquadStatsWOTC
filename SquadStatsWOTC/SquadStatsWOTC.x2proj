@@ -33,6 +33,12 @@
     <Content Include="Src\LW_Tuple\Classes\LWTuple.uc">
       <SubType>Content</SubType>
     </Content>
+    <Content Include="Src\SquadStatsWOTC\Classes\FilteredScreen.uc">
+      <SubType>Content</SubType>
+    </Content>
+    <Content Include="Src\SquadStatsWOTC\Classes\FilteredScreen_ListItem.uc">
+      <SubType>Content</SubType>
+    </Content>
     <Content Include="Src\SquadStatsWOTC\Classes\SquadScreen.uc">
       <SubType>Content</SubType>
     </Content>
